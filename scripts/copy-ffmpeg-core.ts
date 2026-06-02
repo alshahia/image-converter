@@ -7,14 +7,14 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 
 const SOURCE_CANDIDATES = [
-  join(ROOT, "node_modules", "@ffmpeg", "core", "dist", "esm"),
-  join(ROOT, "node_modules", "@ffmpeg", "core", "dist", "umd"),
-  join(ROOT, "node_modules", "@ffmpeg", "core", "dist"),
+  join(ROOT, 'node_modules', '@ffmpeg', 'core', 'dist', 'esm'),
+  join(ROOT, 'node_modules', '@ffmpeg', 'core', 'dist', 'umd'),
+  join(ROOT, 'node_modules', '@ffmpeg', 'core', 'dist'),
 ];
 
-const TARGET_DIR = join(ROOT, "public", "ffmpeg");
+const TARGET_DIR = join(ROOT, 'public', 'ffmpeg');
 
-const REQUIRED_FILES = ["ffmpeg-core.js", "ffmpeg-core.wasm"];
+const REQUIRED_FILES = ['ffmpeg-core.js', 'ffmpeg-core.wasm'];
 
 async function findSourceDir(): Promise<string | null> {
   for (const candidate of SOURCE_CANDIDATES) {

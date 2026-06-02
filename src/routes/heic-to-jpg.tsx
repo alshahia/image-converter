@@ -1,8 +1,15 @@
+import { ToolPage } from '../components/tool/ToolPage';
+import { heicToJpg } from '../lib/conversions/image/heic-to-jpg';
+
 export default function HeicToJpgPage() {
   return (
-    <div className="prose dark:prose-invert">
-      <h1>HEIC to JPG</h1>
-      <p>Coming soon. Day 4 of the build plan.</p>
-    </div>
+    <ToolPage
+      title="HEIC to JPG"
+      description="Convert iPhone HEIC photos to JPG in your browser. No upload, no signup, EXIF stripped by default."
+      accept={['.heic', '.heif', 'image/heic', 'image/heif']}
+      convert={(file) => heicToJpg(file)}
+      outputMimeType="image/jpeg"
+      outputExtension="jpg"
+    />
   );
 }
