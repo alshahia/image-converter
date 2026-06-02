@@ -1,7 +1,12 @@
-import type { ConvertRequest, ConvertResponse, ImageFormat } from '../workers/image.worker';
+import type {
+  ConvertRequest,
+  ConvertResponse,
+  ImageFormat,
+  ResizeSpec,
+} from '../workers/image.worker';
 import { stripExifFromJpeg } from './exif';
 
-export type { ImageFormat } from '../workers/image.worker';
+export type { ImageFormat, ResizeSpec } from '../workers/image.worker';
 
 let workerInstance: Worker | null = null;
 let nextId = 1;
@@ -36,22 +41,30 @@ export interface ConvertOptions {
   from: ImageFormat;
   to: ImageFormat;
   quality?: number;
+  resize?: ResizeSpec;
+}
+
+export interface ConvertResult {
+  buffer: ArrayBuffer;
+  width: number;
+  height: number;
 }
 
 export async function convertImageBuffer(
   buffer: ArrayBuffer,
   options: ConvertOptions,
-): Promise<ArrayBuffer> {
+): Promise<ConvertResult> {
   const response = await runOnWorker({
     from: options.from,
     to: options.to,
     buffer,
     quality: options.quality,
+    resize: options.resize,
   });
   if (!response.ok) {
     throw new Error(response.error);
   }
-  return response.buffer;
+  return { buffer: response.buffer, width: response.width, height: response.height };
 }
 
 const MIME_TYPES: Record<ImageFormat, string> = {
@@ -66,12 +79,57 @@ export function mimeTypeFor(format: ImageFormat): string {
 
 export async function convertImage(input: Blob, options: ConvertOptions): Promise<Blob> {
   const inputBuffer = await input.arrayBuffer();
-  const outputBuffer = await convertImageBuffer(inputBuffer, options);
-  let blob = new Blob([outputBuffer], { type: MIME_TYPES[options.to] });
+  const { buffer } = await convertImageBuffer(inputBuffer, options);
+  let blob = new Blob([buffer], { type: MIME_TYPES[options.to] });
   if (options.to === 'jpeg') {
     blob = await stripExifFromJpeg(blob);
   }
   return blob;
+}
+
+export function detectFormat(blob: Blob): ImageFormat | null {
+  const mime = blob.type;
+  if (mime === 'image/jpeg') return 'jpeg';
+  if (mime === 'image/png') return 'png';
+  if (mime === 'image/webp') return 'webp';
+  return null;
+}
+
+export async function getImageDimensions(blob: Blob): Promise<{ width: number; height: number }> {
+  if (typeof createImageBitmap === 'function') {
+    const bitmap = await createImageBitmap(blob);
+    const result = { width: bitmap.width, height: bitmap.height };
+    bitmap.close();
+    return result;
+  }
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      const result = { width: img.naturalWidth, height: img.naturalHeight };
+      URL.revokeObjectURL(url);
+      resolve(result);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Failed to load image for dimension detection'));
+    };
+    img.src = url;
+  });
+}
+
+export function computeResizeToFit(
+  original: { width: number; height: number },
+  longestEdge: number,
+): { width: number; height: number } {
+  if (longestEdge <= 0) return original;
+  const longest = Math.max(original.width, original.height);
+  if (longest <= longestEdge) return original;
+  const scale = longestEdge / longest;
+  return {
+    width: Math.max(1, Math.round(original.width * scale)),
+    height: Math.max(1, Math.round(original.height * scale)),
+  };
 }
 
 export function terminateWorker(): void {
