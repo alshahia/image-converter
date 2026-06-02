@@ -4,7 +4,7 @@ interface Tool {
   readonly path: string;
   readonly title: string;
   readonly description: string;
-  readonly status: 'live' | 'wip' | 'smoke';
+  readonly category: 'image' | 'video' | 'internal';
 }
 
 const TOOLS: ReadonlyArray<Tool> = [
@@ -12,73 +12,73 @@ const TOOLS: ReadonlyArray<Tool> = [
     path: '/heic-to-jpg',
     title: 'HEIC to JPG',
     description: 'Convert iPhone HEIC photos to JPG in your browser. No upload.',
-    status: 'wip',
+    category: 'image',
   },
   {
     path: '/png-to-jpg',
     title: 'PNG to JPG',
     description: 'Convert PNG images to JPG with adjustable quality.',
-    status: 'wip',
+    category: 'image',
   },
   {
     path: '/jpg-to-png',
     title: 'JPG to PNG',
     description: 'Convert JPG images to lossless PNG.',
-    status: 'wip',
+    category: 'image',
   },
   {
     path: '/webp-to-jpg',
     title: 'WebP to JPG',
     description: 'Convert modern WebP images to universally supported JPG.',
-    status: 'wip',
+    category: 'image',
   },
   {
     path: '/jpg-to-webp',
     title: 'JPG to WebP',
     description: 'Convert JPG images to smaller WebP files.',
-    status: 'wip',
+    category: 'image',
   },
   {
     path: '/resize-image',
     title: 'Resize Image',
     description: 'Resize images to a specific width or height in your browser.',
-    status: 'wip',
+    category: 'image',
   },
   {
     path: '/compress-image',
     title: 'Compress Image',
     description: 'Shrink JPG/PNG/WebP file size with a quality slider.',
-    status: 'wip',
+    category: 'image',
   },
   {
     path: '/strip-exif',
     title: 'Strip EXIF',
     description: 'Remove EXIF metadata (GPS, camera, timestamp) from a JPG.',
-    status: 'wip',
+    category: 'image',
   },
   {
     path: '/video-to-mp4',
     title: 'Video to MP4',
     description: 'Convert any video to MP4 (H.264) in your browser.',
-    status: 'wip',
+    category: 'video',
   },
   {
     path: '/video-to-gif',
     title: 'Video to GIF',
     description: 'Convert a short video clip to an animated GIF.',
-    status: 'wip',
+    category: 'video',
   },
   {
     path: '/extract-audio',
     title: 'Extract Audio',
-    description: 'Pull the audio track out of a video as MP3.',
-    status: 'wip',
+    description: 'Pull the audio track out of a video as MP3, WAV, or AAC.',
+    category: 'video',
   },
   {
     path: '/ffmpeg-smoke',
     title: 'ffmpeg.wasm smoke test',
     description: 'Internal: verify ffmpeg.wasm loads on this browser. Not a user tool.',
-    status: 'smoke',
+    category: 'internal',
   },
 ];
 
@@ -92,34 +92,35 @@ export function HomePage() {
         <p className="max-w-2xl text-lg text-neutral-600 dark:text-neutral-400">
           Drop a file, pick a tool, get the result. Nothing is uploaded. We never see your files.
         </p>
+        <p className="max-w-2xl text-sm text-neutral-500">
+          All 11 tools run locally using WebAssembly. EXIF is stripped from every image output. Open
+          source on{' '}
+          <a className="underline" href="https://github.com/alshahia/image-converter">
+            GitHub
+          </a>
+          .
+        </p>
       </section>
 
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-neutral-500">
           Image tools
         </h2>
-        <ToolGrid
-          tools={TOOLS.filter(
-            (t) =>
-              t.status === 'wip' && !t.path.startsWith('/video-') && t.path !== '/extract-audio',
-          )}
-        />
+        <ToolGrid tools={TOOLS.filter((t) => t.category === 'image')} />
       </section>
 
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-neutral-500">
           Video tools
         </h2>
-        <ToolGrid
-          tools={TOOLS.filter((t) => t.path.startsWith('/video-') || t.path === '/extract-audio')}
-        />
+        <ToolGrid tools={TOOLS.filter((t) => t.category === 'video')} />
       </section>
 
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-neutral-500">
           Internal
         </h2>
-        <ToolGrid tools={TOOLS.filter((t) => t.status === 'smoke')} />
+        <ToolGrid tools={TOOLS.filter((t) => t.category === 'internal')} />
       </section>
     </div>
   );
