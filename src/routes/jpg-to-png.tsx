@@ -1,8 +1,15 @@
+import { ToolPage } from '../components/tool/ToolPage';
+import { jpgToPng } from '../lib/conversions/image/jpg-to-png';
+
 export default function JpgToPngPage() {
   return (
-    <div className="prose dark:prose-invert">
-      <h1>JPG to PNG</h1>
-      <p>Coming soon. Week 2 of the build plan.</p>
-    </div>
+    <ToolPage
+      title="JPG to PNG"
+      description="Convert JPG images to PNG in your browser. No upload, no signup."
+      accept={['.jpg', '.jpeg', 'image/jpeg']}
+      convert={jpgToPng}
+      outputMimeType="image/png"
+      outputExtension="png"
+    />
   );
 }
