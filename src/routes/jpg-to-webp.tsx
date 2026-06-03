@@ -15,6 +15,7 @@ export default function JpgToWebpPage() {
       convert={convert}
       outputMimeType="image/webp"
       outputExtension="webp"
+      autoConvert={false}
       optionsComponent={
         <ToolOptions title="Options">
           <Slider

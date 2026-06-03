@@ -12,7 +12,7 @@ export interface UseConversionResult {
   reset: () => void;
 }
 
-export function useConversion(): UseConversionResult {
+export function useConversion(onCancel?: () => void): UseConversionResult {
   const [status, setStatus] = useState<ConversionStatus>('idle');
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<Blob | null>(null);
@@ -61,7 +61,8 @@ export function useConversion(): UseConversionResult {
 
   const cancel = useCallback(() => {
     cancelledRef.current = true;
-  }, []);
+    onCancel?.();
+  }, [onCancel]);
 
   const reset = useCallback(() => {
     cancelledRef.current = false;

@@ -43,6 +43,14 @@ export function attachProgress(ffmpeg: FFmpeg, onProgress: (pct: number) => void
   return () => ffmpeg.off('progress', handler);
 }
 
+export function terminateFFmpeg(): void {
+  if (ffmpegInstance) {
+    ffmpegInstance.terminate();
+    ffmpegInstance = null;
+  }
+  loadingPromise = null;
+}
+
 export function isFFmpegLoaded(): boolean {
   return ffmpegInstance !== null;
 }

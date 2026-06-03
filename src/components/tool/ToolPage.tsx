@@ -22,6 +22,8 @@ export interface ToolPageProps {
   outputMimeType: string;
   outputExtension: string;
   optionsComponent?: ReactNode;
+  onCancel?: () => void;
+  autoConvert?: boolean;
   validateFile?: (file: File) => string | null;
 }
 
@@ -33,11 +35,13 @@ export function ToolPage({
   outputMimeType,
   outputExtension,
   optionsComponent,
+  onCancel,
+  autoConvert = true,
   validateFile,
 }: ToolPageProps) {
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
-  const { status, progress, result, error, run, cancel, reset } = useConversion();
+  const { status, progress, result, error, run, cancel, reset } = useConversion(onCancel);
 
   const handleFile = useCallback(
     async (f: File | File[]) => {
@@ -66,10 +70,12 @@ export function ToolPage({
         }
       }
       setFile(first);
-      const blob = await run(convert(first));
-      void blob;
+      if (autoConvert) {
+        const blob = await run(convert(first));
+        void blob;
+      }
     },
-    [accept, convert, run, validateFile],
+    [accept, autoConvert, convert, run, validateFile],
   );
 
   const handleRemove = useCallback(() => {
@@ -83,6 +89,11 @@ export function ToolPage({
     if (!file) return;
     handleFile(file);
   }, [file, handleFile]);
+
+  const handleConvert = useCallback(() => {
+    if (!file) return;
+    run(convert(file));
+  }, [file, convert, run]);
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -109,6 +120,18 @@ export function ToolPage({
       )}
 
       {file && status === 'idle' && <FilePreview file={file} onRemove={handleRemove} />}
+
+      {file && status === 'idle' && !autoConvert && (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={handleConvert}
+            className="rounded bg-neutral-900 px-6 py-2 text-sm font-medium text-white hover:bg-neutral-700 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
+          >
+            Convert
+          </button>
+        </div>
+      )}
 
       {file && status === 'processing' && (
         <ProcessingStatus progress={progress} onCancel={cancel} />

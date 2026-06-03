@@ -10,7 +10,7 @@ import { DropZone } from '../components/upload/DropZone';
 import { FilePreview } from '../components/upload/FilePreview';
 import { useConversion } from '../hooks/useConversion';
 import { compressImage } from '../lib/conversions/image/compress';
-import { detectFormat } from '../lib/engines/jsquash';
+import { detectFormat, terminateWorker } from '../lib/engines/jsquash';
 import { humanReadableAccept, isAcceptedType } from '../lib/utils/fileValidation';
 import {
   MAX_IMAGE_BYTES,
@@ -25,7 +25,7 @@ export default function CompressImagePage() {
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [quality, setQuality] = useState(70);
-  const { status, progress, result, error, run, cancel, reset } = useConversion();
+  const { status, progress, result, error, run, cancel, reset } = useConversion(terminateWorker);
 
   const handleFile = useCallback(
     (f: File | File[]) => {

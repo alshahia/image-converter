@@ -8,6 +8,7 @@ import { DropZone } from '../components/upload/DropZone';
 import { FilePreview } from '../components/upload/FilePreview';
 import { useConversion } from '../hooks/useConversion';
 import { videoToMp4 } from '../lib/conversions/video/video-to-mp4';
+import { terminateFFmpeg } from '../lib/engines/ffmpeg';
 import { humanReadableAccept, isAcceptedType } from '../lib/utils/fileValidation';
 import {
   MAX_VIDEO_BYTES,
@@ -34,7 +35,7 @@ const ACCEPT = [
 export default function VideoToMp4Page() {
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
-  const { status, progress, result, error, run, cancel, reset } = useConversion();
+  const { status, progress, result, error, run, cancel, reset } = useConversion(terminateFFmpeg);
 
   const handleFile = useCallback(
     (f: File | File[]) => {

@@ -8,6 +8,7 @@ import { DropZone } from '../components/upload/DropZone';
 import { FilePreview } from '../components/upload/FilePreview';
 import { useConversion } from '../hooks/useConversion';
 import { type AudioFormat, extractAudio } from '../lib/conversions/video/extract-audio';
+import { terminateFFmpeg } from '../lib/engines/ffmpeg';
 import { humanReadableAccept, isAcceptedType } from '../lib/utils/fileValidation';
 import {
   MAX_VIDEO_BYTES,
@@ -41,7 +42,7 @@ export default function ExtractAudioPage() {
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [format, setFormat] = useState<AudioFormat>('mp3');
-  const { status, progress, result, error, run, cancel, reset } = useConversion();
+  const { status, progress, result, error, run, cancel, reset } = useConversion(terminateFFmpeg);
 
   const handleFile = useCallback(
     (f: File | File[]) => {
@@ -84,6 +85,7 @@ export default function ExtractAudioPage() {
     mp3: 'audio/mpeg',
     wav: 'audio/wav',
     aac: 'audio/aac',
+    m4a: 'audio/mp4',
   };
 
   return (

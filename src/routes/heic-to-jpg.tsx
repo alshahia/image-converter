@@ -1,5 +1,6 @@
 import { ToolPage } from '../components/tool/ToolPage';
 import { heicToJpg } from '../lib/conversions/image/heic-to-jpg';
+import { terminateWorker } from '../lib/engines/jsquash';
 
 export default function HeicToJpgPage() {
   return (
@@ -10,6 +11,7 @@ export default function HeicToJpgPage() {
       convert={(file) => heicToJpg(file)}
       outputMimeType="image/jpeg"
       outputExtension="jpg"
+      onCancel={terminateWorker}
     />
   );
 }

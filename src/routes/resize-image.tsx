@@ -10,7 +10,12 @@ import { DropZone } from '../components/upload/DropZone';
 import { FilePreview } from '../components/upload/FilePreview';
 import { useConversion } from '../hooks/useConversion';
 import { resizeImage } from '../lib/conversions/image/resize';
-import { computeResizeToFit, detectFormat, getImageDimensions } from '../lib/engines/jsquash';
+import {
+  computeResizeToFit,
+  detectFormat,
+  getImageDimensions,
+  terminateWorker,
+} from '../lib/engines/jsquash';
 import { humanReadableAccept, isAcceptedType } from '../lib/utils/fileValidation';
 import {
   MAX_IMAGE_BYTES,
@@ -29,7 +34,7 @@ export default function ResizeImagePage() {
   const [originalDims, setOriginalDims] = useState<{ width: number; height: number } | null>(null);
   const [dimsError, setDimsError] = useState<string | null>(null);
   const [longestEdge, setLongestEdge] = useState(1920);
-  const { status, progress, result, error, run, cancel, reset } = useConversion();
+  const { status, progress, result, error, run, cancel, reset } = useConversion(terminateWorker);
 
   useEffect(() => {
     if (!file) {
