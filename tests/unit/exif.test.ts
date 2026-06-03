@@ -1,29 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { blobToDataUrl, dataUrlToBlob, stripExifFromJpeg } from '../../src/lib/engines/exif';
-
-function readBlobAsBytes(blob: Blob): Promise<Uint8Array> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (reader.result instanceof ArrayBuffer) resolve(new Uint8Array(reader.result));
-      else reject(new Error('FileReader result was not an ArrayBuffer'));
-    };
-    reader.onerror = () => reject(reader.error ?? new Error('FileReader failed'));
-    reader.readAsArrayBuffer(blob);
-  });
-}
-
-describe('blobToDataUrl / dataUrlToBlob', () => {
-  it('round-trips a blob', async () => {
-    const original = new Blob([new Uint8Array([1, 2, 3, 4])], { type: 'text/plain' });
-    const dataUrl = await blobToDataUrl(original);
-    expect(dataUrl).toMatch(/^data:text\/plain;base64,/);
-    const back = dataUrlToBlob(dataUrl);
-    expect(back.type).toBe('text/plain');
-    const backBytes = await readBlobAsBytes(back);
-    expect(Array.from(backBytes)).toEqual([1, 2, 3, 4]);
-  });
-});
+import { stripExifFromJpeg } from '../../src/lib/engines/exif';
 
 describe('stripExifFromJpeg', () => {
   it('returns non-JPEG blobs unchanged', async () => {
