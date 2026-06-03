@@ -1,24 +1,12 @@
 import { fetchFile } from '@ffmpeg/util';
 import { attachProgress, getFFmpeg } from '../../engines/ffmpeg';
+import { inferVideoExtension } from '../../utils/video';
 
 export type Mp4Preset = 'ultrafast' | 'fast' | 'medium';
 
 export interface VideoToMp4Options {
   preset?: Mp4Preset;
   onProgress?: (pct: number) => void;
-}
-
-const INPUT_EXTENSIONS = ['mp4', 'mov', 'webm', 'mkv', 'avi', 'flv', 'm4v', 'mpeg', 'mpg'];
-
-function inferExtension(file: File | Blob, fallback: string): string {
-  const fromName = file instanceof File ? file.name.split('.').pop()?.toLowerCase() : undefined;
-  if (fromName && INPUT_EXTENSIONS.includes(fromName)) return fromName;
-  const fromType = file.type;
-  if (fromType === 'video/mp4') return 'mp4';
-  if (fromType === 'video/quicktime') return 'mov';
-  if (fromType === 'video/webm') return 'webm';
-  if (fromType === 'video/x-matroska') return 'mkv';
-  return fallback;
 }
 
 export async function videoToMp4(
@@ -29,7 +17,7 @@ export async function videoToMp4(
   const ffmpeg = await getFFmpeg();
   const detach = onProgress ? attachProgress(ffmpeg, onProgress) : null;
 
-  const inputName = `input.${inferExtension(file, 'mp4')}`;
+  const inputName = `input.${inferVideoExtension(file, 'mp4')}`;
   const outputName = 'output.mp4';
 
   try {
