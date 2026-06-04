@@ -1,0 +1,1603 @@
+<!doctype html>
+<!--
+  Drift — final design spec for the image-converter app.
+  This is the source of truth for the React conversion.
+
+  Translation notes for the implementer:
+  - Fonts must be self-hosted in public/fonts/ (Plus Jakarta Sans + Instrument Serif).
+    Google Fonts will be blocked by COEP. See AGENTS.md "All assets self-hosted".
+  - Tailwind classes are all standard. Translate to local Tailwind config
+    (extend colors, fontFamily, backdropBlur, keyframes).
+  - All `aria-hidden` SVGs stay aria-hidden — they're decorative.
+  - Blob animations and the upload-zone pulse are disabled under
+    prefers-reduced-motion and below the md breakpoint.
+  - The hero drop-zone is a real, working conversion (image → WebP via canvas).
+    This proves the technology on the landing page; the tool pages still use
+    the real jsquash / ffmpeg.wasm engines.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Drift — Image tools that stay in your browser</title>
+    <meta
+      name="description"
+      content="Convert, compress, and resize images and videos locally. Nothing is ever uploaded to a server."
+    />
+    <meta property="og:title" content="Drift" />
+    <meta property="og:description" content="Image tools that stay in your browser." />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!--
+      Self-hosted font preload. Real implementation will point to /fonts/*.woff2
+      in public/fonts/. Inter and JetBrains Mono are already on the system;
+      these two are new.
+    -->
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="/fonts/plus-jakarta-sans-700.woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="/fonts/instrument-serif-400-italic.woff2"
+      crossorigin
+    />
+    <style>
+      :root {
+        --bg-1: #ffe1ec;
+        --bg-2: #d6e4ff;
+        --bg-3: #e7d8ff;
+        --bg-4: #d3f3e0;
+        --ink: #2a2438;
+        --ink-2: #4a4358;
+        --ink-muted: #6b6480;
+        --ink-subtle: #9b94ad;
+        --accent: #ff5b8d;
+        --accent-strong: #e84783;
+        --accent-2: #7b5fff;
+        --accent-3: #5b9eff;
+        --success: #10b981;
+        --glass: rgba(255, 255, 255, 0.55);
+        --glass-strong: rgba(255, 255, 255, 0.7);
+        --glass-soft: rgba(255, 255, 255, 0.4);
+        --glass-border: rgba(255, 255, 255, 0.8);
+        --glass-border-soft: rgba(255, 255, 255, 0.6);
+        --glass-shadow: 0 8px 32px rgba(123, 95, 255, 0.12);
+        --focus-ring: 0 0 0 3px rgba(255, 91, 141, 0.4);
+      }
+      @font-face {
+        font-family: 'Plus Jakarta Sans';
+        font-style: normal;
+        font-weight: 300 800;
+        font-display: swap;
+        src: url('/fonts/plus-jakarta-sans-latin.woff2') format('woff2');
+      }
+      @font-face {
+        font-family: 'Instrument Serif';
+        font-style: italic;
+        font-weight: 400;
+        font-display: swap;
+        src: url('/fonts/instrument-serif-italic-latin.woff2') format('woff2');
+      }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      html,
+      body {
+        background: linear-gradient(
+          135deg,
+          var(--bg-1) 0%,
+          var(--bg-2) 33%,
+          var(--bg-3) 66%,
+          var(--bg-4) 100%
+        );
+        background-attachment: fixed;
+        color: var(--ink);
+        font-family:
+          'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+          Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        min-height: 100vh;
+        position: relative;
+        overflow-x: hidden;
+      }
+      body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+        opacity: 0.025;
+        pointer-events: none;
+        z-index: 0;
+      }
+      .font-serif {
+        font-family: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+        font-style: italic;
+        font-weight: 400;
+        letter-spacing: -0.01em;
+      }
+      .font-mono {
+        font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo,
+          Monaco, Consolas, monospace;
+        font-feature-settings: 'tnum' 1, 'cv11' 1;
+      }
+
+      /* Floating gradient blobs (decorative, hidden on small screens) */
+      .blob {
+        position: fixed;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.55;
+        pointer-events: none;
+        z-index: 0;
+        will-change: transform;
+      }
+      .blob-1 {
+        width: 500px;
+        height: 500px;
+        background: radial-gradient(circle, #ffb1c8, transparent 70%);
+        top: -100px;
+        left: -100px;
+        animation: drift 20s ease-in-out infinite;
+      }
+      .blob-2 {
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(circle, #b5cdff, transparent 70%);
+        top: 30%;
+        right: -200px;
+        animation: drift 24s ease-in-out infinite reverse;
+      }
+      .blob-3 {
+        width: 450px;
+        height: 450px;
+        background: radial-gradient(circle, #d3b3ff, transparent 70%);
+        bottom: -100px;
+        left: 20%;
+        animation: drift 22s ease-in-out infinite;
+      }
+      @keyframes drift {
+        0%, 100% {
+          transform: translate(0, 0) scale(1);
+        }
+        33% {
+          transform: translate(30px, -30px) scale(1.05);
+        }
+        66% {
+          transform: translate(-20px, 20px) scale(0.95);
+        }
+      }
+      @media (max-width: 767px) {
+        .blob {
+          display: none;
+        }
+      }
+
+      /* Glass surface */
+      .glass {
+        background: var(--glass);
+        backdrop-filter: blur(24px) saturate(150%);
+        -webkit-backdrop-filter: blur(24px) saturate(150%);
+        border: 1px solid var(--glass-border);
+        box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+      }
+      .glass-strong {
+        background: var(--glass-strong);
+        backdrop-filter: blur(30px) saturate(180%);
+        -webkit-backdrop-filter: blur(30px) saturate(180%);
+        border: 1px solid rgba(255, 255, 255, 0.9);
+        box-shadow:
+          0 12px 40px rgba(123, 95, 255, 0.15),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      }
+      .glass-soft {
+        background: var(--glass-soft);
+        backdrop-filter: blur(16px) saturate(140%);
+        -webkit-backdrop-filter: blur(16px) saturate(140%);
+        border: 1px solid var(--glass-border-soft);
+      }
+
+      /* Tool card */
+      .tool-card {
+        background: rgba(255, 255, 255, 0.5);
+        backdrop-filter: blur(20px) saturate(160%);
+        -webkit-backdrop-filter: blur(20px) saturate(160%);
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        box-shadow: 0 4px 20px rgba(123, 95, 255, 0.08);
+        border-radius: 24px;
+        transition:
+          transform 400ms cubic-bezier(0.16, 1, 0.3, 1),
+          background-color 300ms ease,
+          box-shadow 300ms ease,
+          border-color 300ms ease;
+        position: relative;
+        overflow: hidden;
+        isolation: isolate;
+        display: block;
+        text-decoration: none;
+        color: inherit;
+      }
+      .tool-card::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.5) 0%,
+          transparent 40%
+        );
+        opacity: 0;
+        transition: opacity 400ms ease;
+        z-index: -1;
+      }
+      .tool-card:hover {
+        transform: translateY(-6px);
+        background: rgba(255, 255, 255, 0.7);
+        box-shadow: 0 16px 40px rgba(123, 95, 255, 0.15);
+      }
+      .tool-card:hover::before {
+        opacity: 1;
+      }
+      .tool-card:focus-visible {
+        outline: none;
+        box-shadow:
+          0 16px 40px rgba(123, 95, 255, 0.15),
+          var(--focus-ring);
+      }
+
+      /* Icon tile — small gradient square for tool icons */
+      .icon-tile {
+        width: 56px;
+        height: 56px;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+        flex-shrink: 0;
+      }
+      .icon-tile::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.6),
+          transparent 60%
+        );
+        pointer-events: none;
+      }
+      .icon-tile > * {
+        position: relative;
+        z-index: 1;
+      }
+      .icon-tile.pink {
+        background: linear-gradient(135deg, #ffd1e0, #ffafce);
+      }
+      .icon-tile.purple {
+        background: linear-gradient(135deg, #e0d1ff, #c5a8ff);
+      }
+      .icon-tile.blue {
+        background: linear-gradient(135deg, #d1e0ff, #a8c5ff);
+      }
+      .icon-tile.green {
+        background: linear-gradient(135deg, #d1ffe0, #a8ffc5);
+      }
+      .icon-tile.yellow {
+        background: linear-gradient(135deg, #fff0c1, #ffdf8a);
+      }
+      .icon-tile.peach {
+        background: linear-gradient(135deg, #ffd8c1, #ffb88a);
+      }
+      .icon-tile svg {
+        stroke-width: 2.25;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      /* Buttons */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 28px;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 15px;
+        line-height: 1;
+        transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
+        cursor: pointer;
+        border: 0;
+        text-decoration: none;
+        font-family: inherit;
+      }
+      .btn:focus-visible {
+        outline: none;
+        box-shadow: var(--focus-ring);
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, #ff5b8d 0%, #ff8da1 100%);
+        color: white;
+        box-shadow:
+          0 8px 24px rgba(255, 91, 141, 0.35),
+          inset 0 1px 0 rgba(255, 255, 255, 0.4);
+      }
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow:
+          0 12px 32px rgba(255, 91, 141, 0.45),
+          inset 0 1px 0 rgba(255, 255, 255, 0.5);
+      }
+      .btn-primary:active {
+        transform: translateY(0);
+      }
+      .btn-primary:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+      .btn-secondary {
+        background: rgba(255, 255, 255, 0.6);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        color: var(--ink);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        box-shadow: 0 4px 12px rgba(123, 95, 255, 0.1);
+      }
+      .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.85);
+        transform: translateY(-2px);
+      }
+      .btn-ghost {
+        background: transparent;
+        color: var(--ink-2);
+        padding: 10px 18px;
+      }
+      .btn-ghost:hover {
+        background: rgba(255, 255, 255, 0.4);
+      }
+
+      /* Hero drop-zone — real working conversion */
+      .demo-zone {
+        background: rgba(255, 255, 255, 0.5);
+        backdrop-filter: blur(24px) saturate(150%);
+        -webkit-backdrop-filter: blur(24px) saturate(150%);
+        border: 2px dashed rgba(255, 255, 255, 0.8);
+        border-radius: 32px;
+        padding: 48px 32px;
+        text-align: center;
+        transition: all 300ms ease;
+        position: relative;
+        overflow: hidden;
+        isolation: isolate;
+        cursor: pointer;
+      }
+      .demo-zone::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(
+          circle,
+          rgba(255, 91, 141, 0.12),
+          transparent 40%
+        );
+        animation: pulse-bg 8s ease-in-out infinite;
+        z-index: -1;
+        pointer-events: none;
+      }
+      .demo-zone:hover,
+      .demo-zone.is-dragover {
+        background: rgba(255, 255, 255, 0.7);
+        border-color: var(--accent);
+        border-style: solid;
+        transform: translateY(-2px);
+      }
+      .demo-zone.is-dragover {
+        box-shadow: 0 12px 40px rgba(255, 91, 141, 0.2);
+      }
+      .demo-zone:focus-visible {
+        outline: none;
+        box-shadow: var(--focus-ring);
+      }
+      @keyframes pulse-bg {
+        0%, 100% {
+          transform: translate(0, 0);
+        }
+        50% {
+          transform: translate(20%, 20%);
+        }
+      }
+
+      .demo-result {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+        text-align: left;
+      }
+      @media (min-width: 640px) {
+        .demo-result {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      .demo-preview {
+        aspect-ratio: 4 / 3;
+        background: rgba(255, 255, 255, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        position: relative;
+      }
+      .demo-preview img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        display: block;
+      }
+      .demo-preview-label {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        padding: 4px 10px;
+        border-radius: 999px;
+        color: var(--ink-2);
+      }
+      .progress-bar {
+        height: 6px;
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 999px;
+        overflow: hidden;
+        position: relative;
+      }
+      .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--accent), var(--accent-2));
+        border-radius: 999px;
+        transition: width 300ms ease;
+        width: 0%;
+      }
+
+      /* Nav pill */
+      .nav-pill {
+        padding: 8px 16px;
+        border-radius: 999px;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--ink-muted);
+        transition: all 200ms ease;
+        text-decoration: none;
+      }
+      .nav-pill:hover {
+        background: rgba(255, 255, 255, 0.5);
+        color: var(--ink);
+      }
+      .nav-pill:focus-visible {
+        outline: none;
+        box-shadow: var(--focus-ring);
+      }
+
+      /* Stat pill (live status indicator) */
+      .stat-pill {
+        padding: 8px 16px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.5);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--success);
+        box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+        animation: pulse-dot 2.4s ease-in-out infinite;
+      }
+      @keyframes pulse-dot {
+        0%, 100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      /* Gradient text */
+      .gradient-text {
+        background: linear-gradient(
+          135deg,
+          var(--accent) 0%,
+          var(--accent-2) 50%,
+          var(--accent-3) 100%
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      /* Hero entry animation — staggered, once */
+      .fade-up {
+        opacity: 0;
+        transform: translateY(16px);
+        animation: fade-up 700ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      .fade-up-1 {
+        animation-delay: 80ms;
+      }
+      .fade-up-2 {
+        animation-delay: 160ms;
+      }
+      .fade-up-3 {
+        animation-delay: 240ms;
+      }
+      .fade-up-4 {
+        animation-delay: 320ms;
+      }
+      @keyframes fade-up {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Focus-visible for all interactive elements */
+      a:focus-visible,
+      button:focus-visible,
+      [tabindex]:focus-visible {
+        outline: none;
+        box-shadow: var(--focus-ring);
+        border-radius: 12px;
+      }
+
+      /* Skip link */
+      .skip-link {
+        position: absolute;
+        top: -40px;
+        left: 16px;
+        z-index: 1000;
+        padding: 8px 16px;
+        background: var(--ink);
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        transition: top 200ms ease;
+      }
+      .skip-link:focus {
+        top: 16px;
+      }
+
+      /* Reduced motion — respect WCAG 2.3.3 */
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+          scroll-behavior: auto !important;
+        }
+        .blob {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a href="#main" class="skip-link">Skip to main content</a>
+
+    <!-- Decorative blobs -->
+    <div class="blob blob-1" aria-hidden="true"></div>
+    <div class="blob blob-2" aria-hidden="true"></div>
+    <div class="blob blob-3" aria-hidden="true"></div>
+
+    <!-- Header -->
+    <header class="relative z-10">
+      <div
+        class="max-w-6xl mx-auto px-6 lg:px-8 py-5 flex items-center justify-between"
+      >
+        <a
+          href="/"
+          class="flex items-center gap-2.5"
+          aria-label="Drift — Home"
+        >
+          <div
+            class="icon-tile pink"
+            style="width: 40px; height: 40px; border-radius: 12px"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#ff5b8d"
+              aria-hidden="true"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <circle cx="9" cy="9" r="2" />
+              <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+            </svg>
+          </div>
+          <span class="text-lg font-bold tracking-tight">drift</span>
+        </a>
+        <nav
+          class="hidden md:flex items-center gap-1 glass-soft"
+          style="border-radius: 999px; padding: 4px"
+          aria-label="Primary"
+        >
+          <a href="#tools" class="nav-pill">Tools</a>
+          <a href="#how" class="nav-pill">How it works</a>
+          <a href="#about" class="nav-pill">About</a>
+          <a
+            href="https://github.com"
+            class="nav-pill"
+            rel="noopener noreferrer"
+            >Source</a
+          >
+        </nav>
+        <a href="#demo" class="btn btn-primary text-sm" style="padding: 10px 20px">
+          Try the demo
+        </a>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- Hero -->
+      <section class="relative z-10 pt-10 md:pt-16 pb-12 md:pb-20">
+        <div class="max-w-6xl mx-auto px-6 lg:px-8">
+          <div class="text-center max-w-4xl mx-auto">
+            <div class="inline-flex items-center gap-2 mb-8 fade-up">
+              <div class="stat-pill">
+                <span class="dot" aria-hidden="true"></span>
+                <span>All 11 tools · live · client-side</span>
+              </div>
+            </div>
+
+            <h1
+              class="text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-[-0.03em] leading-[0.95] mb-8 fade-up fade-up-1"
+            >
+              Image tools<br />
+              <span class="font-serif gradient-text">as gentle</span><br />
+              as a cloud.
+            </h1>
+
+            <p
+              class="text-lg md:text-xl max-w-2xl mx-auto mb-10 fade-up fade-up-2"
+              style="color: var(--ink-muted); line-height: 1.6"
+            >
+              Convert, compress, and resize images and videos in your browser.
+              <strong style="color: var(--ink)">Nothing</strong> is ever uploaded.
+            </p>
+
+            <div
+              class="flex flex-wrap items-center justify-center gap-3 fade-up fade-up-3"
+            >
+              <a href="#demo" class="btn btn-primary">
+                Drop a file
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <polyline points="19 12 12 19 5 12" />
+                </svg>
+              </a>
+              <a href="#tools" class="btn btn-secondary">Browse all tools</a>
+            </div>
+          </div>
+
+          <!-- Interactive demo: real image → WebP conversion via canvas -->
+          <div
+            id="demo"
+            class="mt-14 md:mt-20 max-w-3xl mx-auto fade-up fade-up-4"
+          >
+            <div
+              class="demo-zone"
+              id="demo-zone"
+              tabindex="0"
+              role="button"
+              aria-label="Drop an image here, or press Enter to browse"
+            >
+              <input
+                type="file"
+                id="demo-input"
+                accept="image/*"
+                class="sr-only"
+                aria-label="Choose an image to convert"
+              />
+              <div id="demo-empty">
+                <div
+                  class="icon-tile pink mx-auto mb-5"
+                  style="width: 64px; height: 64px; border-radius: 20px"
+                >
+                  <svg
+                    width="28"
+                    height="28"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#ff5b8d"
+                    aria-hidden="true"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                </div>
+                <h2 class="text-xl md:text-2xl font-bold mb-2">
+                  Drop an image to convert it to WebP
+                </h2>
+                <p class="text-sm mb-5" style="color: var(--ink-muted)">
+                  or
+                  <button
+                    type="button"
+                    class="font-semibold underline decoration-2 underline-offset-4"
+                    style="color: var(--accent-strong)"
+                    id="demo-browse"
+                  >
+                    browse
+                  </button>
+                  · JPG, PNG, GIF, BMP, WebP
+                </p>
+                <p
+                  class="text-xs font-mono"
+                  style="color: var(--ink-subtle); letter-spacing: 0.05em"
+                >
+                  100% local · no upload · file stays in this tab
+                </p>
+              </div>
+
+              <div id="demo-working" class="hidden">
+                <div class="demo-result mb-4">
+                  <div class="demo-preview">
+                    <span class="demo-preview-label">Original</span>
+                    <img id="demo-original" alt="" />
+                  </div>
+                  <div
+                    class="demo-preview"
+                    style="background: linear-gradient(135deg, rgba(255, 91, 141, 0.08), rgba(123, 95, 255, 0.08))"
+                  >
+                    <span
+                      class="demo-preview-label"
+                      style="background: var(--accent); color: white"
+                      >WebP</span
+                    >
+                    <img id="demo-converted" alt="" />
+                  </div>
+                </div>
+                <div
+                  class="flex flex-wrap items-center justify-between gap-3 text-sm"
+                >
+                  <div class="flex items-center gap-3">
+                    <span class="font-mono" style="color: var(--ink-2)">
+                      <span id="demo-orig-size">—</span>
+                      <span style="color: var(--ink-subtle)"> → </span>
+                      <span
+                        id="demo-new-size"
+                        style="color: var(--accent-strong); font-weight: 600"
+                        >—</span
+                      >
+                    </span>
+                    <span
+                      class="font-mono text-xs px-2 py-0.5 rounded-full"
+                      style="
+                        background: rgba(16, 185, 129, 0.15);
+                        color: var(--success);
+                      "
+                      id="demo-savings"
+                      >—</span
+                    >
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button
+                      type="button"
+                      class="btn btn-secondary"
+                      style="padding: 10px 20px; font-size: 13px"
+                      id="demo-reset"
+                    >
+                      Another
+                    </button>
+                    <a
+                      href="#"
+                      class="btn btn-primary"
+                      style="padding: 10px 20px; font-size: 13px"
+                      id="demo-download"
+                      download
+                    >
+                      Download
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              <div id="demo-progress" class="hidden">
+                <div class="icon-tile purple mx-auto mb-4" style="width: 56px; height: 56px">
+                  <svg
+                    class="animate-spin"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#7b5fff"
+                    aria-hidden="true"
+                    style="animation: spin 1s linear infinite"
+                  >
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                  </svg>
+                </div>
+                <p class="text-sm font-semibold mb-3">Converting to WebP…</p>
+                <div class="progress-bar max-w-xs mx-auto">
+                  <div class="progress-bar-fill" id="demo-progress-fill"></div>
+                </div>
+              </div>
+            </div>
+
+            <p
+              class="text-center text-xs font-mono mt-4"
+              style="color: var(--ink-subtle); letter-spacing: 0.05em"
+            >
+              ✓ Conversion ran entirely in your browser via Canvas API
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tools -->
+      <section id="tools" class="relative z-10 py-20 md:py-24">
+        <div class="max-w-6xl mx-auto px-6 lg:px-8">
+          <div class="text-center max-w-2xl mx-auto mb-14">
+            <p
+              class="text-xs font-bold mb-3"
+              style="
+                color: var(--accent-strong);
+                letter-spacing: 0.15em;
+              "
+            >
+              THE TOOLS
+            </p>
+            <h2
+              class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4"
+            >
+              <span class="font-serif">Eleven</span> small, friendly tools.
+            </h2>
+            <p style="color: var(--ink-muted)">
+              Each one does one thing, in your browser, in seconds.
+            </p>
+          </div>
+
+          <div
+            class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5"
+            role="list"
+          >
+            <!-- Featured: image converter (parent route) -->
+            <a
+              href="/"
+              role="listitem"
+              class="tool-card p-7 sm:col-span-2 lg:col-span-3 flex items-center justify-between flex-wrap gap-5"
+              style="
+                background: linear-gradient(
+                  135deg,
+                  rgba(255, 91, 141, 0.15),
+                  rgba(123, 95, 255, 0.15)
+                );
+              "
+            >
+              <div class="flex items-start gap-5">
+                <div
+                  class="icon-tile pink"
+                  style="width: 64px; height: 64px; border-radius: 20px"
+                >
+                  <svg
+                    width="28"
+                    height="28"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#ff5b8d"
+                    aria-hidden="true"
+                  >
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="9" cy="9" r="2" />
+                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                  </svg>
+                </div>
+                <div>
+                  <p
+                    class="text-xs font-bold mb-2"
+                    style="color: var(--accent-strong); letter-spacing: 0.1em"
+                  >
+                    ⭐ THE FLAGSHIP
+                  </p>
+                  <h3 class="text-2xl md:text-3xl font-extrabold mb-1">
+                    Image Converter
+                  </h3>
+                  <p
+                    class="text-sm md:text-base"
+                    style="color: var(--ink-muted); max-width: 36rem"
+                  >
+                    Convert between JPG, PNG, and WebP with full quality control.
+                    EXIF stripping baked in.
+                  </p>
+                </div>
+              </div>
+              <span
+                class="text-3xl"
+                style="color: var(--accent-strong)"
+                aria-hidden="true"
+                >→</span
+              >
+            </a>
+
+            <!-- 11 tool routes -->
+            <a href="/jpg-to-png" role="listitem" class="tool-card p-6">
+              <div class="icon-tile pink mb-4">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#ff5b8d"
+                  aria-hidden="true"
+                >
+                  <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+              </div>
+              <h3 class="font-bold text-lg mb-1">JPG → PNG</h3>
+              <p class="text-sm font-mono" style="color: var(--ink-muted)">
+                JPG → PNG · lossless
+              </p>
+            </a>
+
+            <a href="/png-to-jpg" role="listitem" class="tool-card p-6">
+              <div class="icon-tile purple mb-4">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#7b5fff"
+                  aria-hidden="true"
+                >
+                  <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+              </div>
+              <h3 class="font-bold text-lg mb-1">PNG → JPG</h3>
+              <p class="text-sm font-mono" style="color: var(--ink-muted)">
+                PNG → JPG · drop alpha
+              </p>
+            </a>
+
+            <a href="/jpg-to-webp" role="listitem" class="tool-card p-6">
+              <div class="icon-tile blue mb-4">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#5b9eff"
+                  aria-hidden="true"
+                >
+                  <polyline points="16 18 22 12 16 6" />
+                  <polyline points="8 6 2 12 8 18" />
+                </svg>
+              </div>
+              <h3 class="font-bold text-lg mb-1">JPG → WebP</h3>
+              <p class="text-sm font-mono" style="color: var(--ink-muted)">
+                JPG → WebP · modern
+              </p>
+            </a>
+
+            <a href="/webp-to-jpg" role="listitem" class="tool-card p-6">
+              <div class="icon-tile green mb-4">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#10b981"
+                  aria-hidden="true"
+                >
+                  <polyline points="8 18 2 12 8 6" />
+                  <polyline points="16 6 22 12 16 18" />
+                </svg>
+              </div>
+              <h3 class="font-bold text-lg mb-1">WebP → JPG</h3>
+              <p class="text-sm font-mono" style="color: var(--ink-muted)">
+                WebP → JPG · universal
+              </p>
+            </a>
+
+            <a href="/heic-to-jpg" role="listitem" class="tool-card p-6">
+              <div class="icon-tile yellow mb-4">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#d97706"
+                  aria-hidden="true"
+                >
+                  <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                  <path d="M12 18h.01" />
+                </svg>
+              </div>
+              <h3 class="font-bold text-lg mb-1">HEIC → JPG</h3>
+              <p class="text-sm font-mono" style="color: var(--ink-muted)">
+                HEIC → JPG · iPhone
+              </p>
+            </a>
+
+            <a href="/compress-image" role="listitem" class="tool-card p-6">
+              <div class="icon-tile peach mb-4">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#ea580c"
+                  aria-hidden="true"
+                >
+                  <path d="M21 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v3" />
+                  <rect x="2" y="8" width="20" height="13" rx="2" />
+                  <path d="M12 12v6" />
+                  <path d="m9 15 3-3 3 3" />
+                </svg>
+              </div>
+              <h3 class="font-bold text-lg mb-1">Compress</h3>
+              <p class="text-sm font-mono" style="color: var(--ink-muted)">
+                Compress · −78% avg
+              </p>
+            </a>
+
+            <a href="/resize-image" role="listitem" class="tool-card p-6">
+              <div class="icon-tile pink mb-4">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#ff5b8d"
+                  aria-hidden="true"
+                >
+                  <polyline points="15 3 21 3 21 9" />
+                  <polyline points="9 21 3 21 3 15" />
+                  <line x1="21" y1="3" x2="14" y2="10" />
+                  <line x1="3" y1="21" x2="10" y2="14" />
+                </svg>
+              </div>
+              <h3 class="font-bold text-lg mb-1">Resize</h3>
+              <p class="text-sm font-mono" style="color: var(--ink-muted)">
+                Resize · exact px
+              </p>
+            </a>
+
+            <a href="/strip-exif" role="listitem" class="tool-card p-6">
+              <div class="icon-tile purple mb-4">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#7b5fff"
+                  aria-hidden="true"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <line x1="9" y1="9" x2="15" y2="15" />
+                  <line x1="15" y1="9" x2="9" y2="15" />
+                </svg>
+              </div>
+              <h3 class="font-bold text-lg mb-1">Strip EXIF</h3>
+              <p class="text-sm font-mono" style="color: var(--ink-muted)">
+                EXIF · remove metadata
+              </p>
+            </a>
+
+            <a href="/video-to-mp4" role="listitem" class="tool-card p-6">
+              <div class="icon-tile blue mb-4">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#5b9eff"
+                  aria-hidden="true"
+                >
+                  <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" />
+                  <line x1="7" y1="2" x2="7" y2="22" />
+                  <line x1="17" y1="2" x2="17" y2="22" />
+                  <line x1="2" y1="12" x2="22" y2="12" />
+                  <line x1="2" y1="7" x2="7" y2="7" />
+                  <line x1="2" y1="17" x2="7" y2="17" />
+                  <line x1="17" y1="7" x2="22" y2="7" />
+                  <line x1="17" y1="17" x2="22" y2="17" />
+                </svg>
+              </div>
+              <h3 class="font-bold text-lg mb-1">Video → MP4</h3>
+              <p class="text-sm font-mono" style="color: var(--ink-muted)">
+                Video → MP4 · re-encode
+              </p>
+            </a>
+
+            <a href="/video-to-gif" role="listitem" class="tool-card p-6">
+              <div class="icon-tile green mb-4">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#10b981"
+                  aria-hidden="true"
+                >
+                  <polyline points="17 1 21 5 17 9" />
+                  <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                  <polyline points="7 23 3 19 7 15" />
+                  <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                </svg>
+              </div>
+              <h3 class="font-bold text-lg mb-1">Video → GIF</h3>
+              <p class="text-sm font-mono" style="color: var(--ink-muted)">
+                Video → GIF · loop
+              </p>
+            </a>
+
+            <a href="/extract-audio" role="listitem" class="tool-card p-6">
+              <div class="icon-tile yellow mb-4">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#d97706"
+                  aria-hidden="true"
+                >
+                  <path d="M9 18V5l12-2v13" />
+                  <circle cx="6" cy="18" r="3" />
+                  <circle cx="18" cy="16" r="3" />
+                </svg>
+              </div>
+              <h3 class="font-bold text-lg mb-1">Extract Audio</h3>
+              <p class="text-sm font-mono" style="color: var(--ink-muted)">
+                Video → MP3 · audio out
+              </p>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- How it works -->
+      <section id="how" class="relative z-10 py-20 md:py-24">
+        <div class="max-w-5xl mx-auto px-6 lg:px-8">
+          <div class="glass-strong p-8 md:p-14 lg:p-16" style="border-radius: 32px">
+            <div class="text-center max-w-2xl mx-auto mb-12">
+              <p
+                class="text-xs font-bold mb-3"
+                style="color: var(--accent-strong); letter-spacing: 0.15em"
+              >
+                HOW IT WORKS
+              </p>
+              <h2 class="text-3xl md:text-5xl font-extrabold tracking-tight">
+                <span class="font-serif">Three</span> soft steps.
+              </h2>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+              <div class="text-center">
+                <div
+                  class="icon-tile pink mx-auto mb-5"
+                  style="width: 64px; height: 64px; border-radius: 20px"
+                >
+                  <svg
+                    width="26"
+                    height="26"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#ff5b8d"
+                    aria-hidden="true"
+                  >
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <rect x="14" y="14" width="7" height="7" rx="1" />
+                  </svg>
+                </div>
+                <h3 class="font-bold text-lg mb-2">Pick a tool</h3>
+                <p class="text-sm" style="color: var(--ink-muted)">
+                  Eleven of them. Each one does one thing, gently.
+                </p>
+              </div>
+              <div class="text-center">
+                <div
+                  class="icon-tile purple mx-auto mb-5"
+                  style="width: 64px; height: 64px; border-radius: 20px"
+                >
+                  <svg
+                    width="26"
+                    height="26"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#7b5fff"
+                    aria-hidden="true"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                </div>
+                <h3 class="font-bold text-lg mb-2">Drop your file</h3>
+                <p class="text-sm" style="color: var(--ink-muted)">
+                  It stays in your browser. We promise.
+                </p>
+              </div>
+              <div class="text-center">
+                <div
+                  class="icon-tile blue mx-auto mb-5"
+                  style="width: 64px; height: 64px; border-radius: 20px"
+                >
+                  <svg
+                    width="26"
+                    height="26"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#5b9eff"
+                    aria-hidden="true"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                </div>
+                <h3 class="font-bold text-lg mb-2">Download the result</h3>
+                <p class="text-sm" style="color: var(--ink-muted)">
+                  In a few seconds. Then we forget it ever happened.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- About / privacy -->
+      <section id="about" class="relative z-10 py-20 md:py-24">
+        <div class="max-w-3xl mx-auto px-6 lg:px-8 text-center">
+          <h2
+            class="text-3xl md:text-4xl font-extrabold tracking-tight mb-6"
+          >
+            Built with care.<br />
+            <span class="font-serif" style="color: var(--accent-strong)"
+              >Zero servers.</span
+            >
+          </h2>
+          <p
+            class="text-lg mb-10"
+            style="color: var(--ink-muted); line-height: 1.7"
+          >
+            Drift is a small, open-source project. Every conversion happens in
+            your browser via WebAssembly. Your files are never uploaded, never
+            logged, never seen by us. The whole thing is a few hundred kilobytes.
+          </p>
+          <div
+            class="grid grid-cols-3 gap-4 max-w-md mx-auto mb-10"
+            style="color: var(--ink-2)"
+          >
+            <div>
+              <div
+                class="font-extrabold text-2xl md:text-3xl"
+                style="color: var(--ink)"
+              >
+                0
+              </div>
+              <div class="text-xs font-mono" style="color: var(--ink-subtle)">
+                SERVERS
+              </div>
+            </div>
+            <div>
+              <div
+                class="font-extrabold text-2xl md:text-3xl"
+                style="color: var(--ink)"
+              >
+                0
+              </div>
+              <div class="text-xs font-mono" style="color: var(--ink-subtle)">
+                COOKIES
+              </div>
+            </div>
+            <div>
+              <div
+                class="font-extrabold text-2xl md:text-3xl"
+                style="color: var(--ink)"
+              >
+                11
+              </div>
+              <div class="text-xs font-mono" style="color: var(--ink-subtle)">
+                TOOLS
+              </div>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center justify-center gap-3">
+            <a href="#tools" class="btn btn-primary">Open a tool</a>
+            <a
+              href="https://github.com"
+              class="btn btn-secondary"
+              rel="noopener noreferrer"
+              >Read the source</a
+            >
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="relative z-10 py-10">
+      <div class="max-w-6xl mx-auto px-6 lg:px-8">
+        <div
+          class="glass-soft rounded-2xl p-5 flex flex-wrap items-center justify-between gap-3"
+          style="border-radius: 20px"
+        >
+          <div class="flex items-center gap-2.5">
+            <div
+              class="icon-tile pink"
+              style="width: 32px; height: 32px; border-radius: 10px"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#ff5b8d"
+                aria-hidden="true"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <circle cx="9" cy="9" r="2" />
+                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+              </svg>
+            </div>
+            <span class="font-bold">drift</span>
+            <span class="text-sm" style="color: var(--ink-subtle)">© 2026</span>
+          </div>
+          <nav
+            class="flex items-center gap-1 text-sm"
+            aria-label="Footer"
+          >
+            <a href="/privacy" class="nav-pill">Privacy</a>
+            <a href="#" class="nav-pill">Source</a>
+            <a href="#" class="nav-pill">Contact</a>
+          </nav>
+          <p class="text-sm" style="color: var(--ink-muted)">
+            Open source · WebAssembly · Privacy-first
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <style>
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+    </style>
+
+    <script>
+      // === Hero demo: real image → WebP conversion via canvas ===
+      (function () {
+        'use strict';
+
+        var zone = document.getElementById('demo-zone');
+        var input = document.getElementById('demo-input');
+        var browse = document.getElementById('demo-browse');
+        var empty = document.getElementById('demo-empty');
+        var working = document.getElementById('demo-working');
+        var progress = document.getElementById('demo-progress');
+        var progressFill = document.getElementById('demo-progress-fill');
+        var originalImg = document.getElementById('demo-original');
+        var convertedImg = document.getElementById('demo-converted');
+        var origSize = document.getElementById('demo-orig-size');
+        var newSize = document.getElementById('demo-new-size');
+        var savings = document.getElementById('demo-savings');
+        var downloadLink = document.getElementById('demo-download');
+        var resetBtn = document.getElementById('demo-reset');
+
+        if (!zone) return;
+
+        function formatBytes(b) {
+          if (b < 1024) return b + ' B';
+          if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+          return (b / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+
+        function showState(name) {
+          empty.classList.toggle('hidden', name !== 'empty');
+          working.classList.toggle('hidden', name !== 'working');
+          progress.classList.toggle('hidden', name !== 'progress');
+        }
+
+        function reset() {
+          input.value = '';
+          originalImg.src = '';
+          convertedImg.src = '';
+          downloadLink.removeAttribute('href');
+          showState('empty');
+          zone.focus();
+        }
+
+        function preventDefaults(e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(function (ev) {
+          zone.addEventListener(ev, preventDefaults);
+          document.body.addEventListener(ev, preventDefaults);
+        });
+
+        ['dragenter', 'dragover'].forEach(function (ev) {
+          zone.addEventListener(ev, function () {
+            zone.classList.add('is-dragover');
+          });
+        });
+        ['dragleave', 'drop'].forEach(function (ev) {
+          zone.addEventListener(ev, function () {
+            zone.classList.remove('is-dragover');
+          });
+        });
+
+        zone.addEventListener('drop', function (e) {
+          var files = e.dataTransfer && e.dataTransfer.files;
+          if (files && files[0]) handleFile(files[0]);
+        });
+
+        zone.addEventListener('click', function (e) {
+          if (e.target === browse || e.target === resetBtn) return;
+          if (e.target.closest('a, button')) return;
+          input.click();
+        });
+        zone.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            input.click();
+          }
+        });
+        browse.addEventListener('click', function (e) {
+          e.stopPropagation();
+          input.click();
+        });
+        input.addEventListener('change', function () {
+          if (input.files && input.files[0]) handleFile(input.files[0]);
+        });
+        resetBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          reset();
+        });
+
+        function handleFile(file) {
+          if (!file.type.startsWith('image/')) {
+            alert('Please drop an image file.');
+            return;
+          }
+          showState('progress');
+          progressFill.style.width = '10%';
+
+          var reader = new FileReader();
+          reader.onload = function (ev) {
+            progressFill.style.width = '40%';
+            var img = new Image();
+            img.onload = function () {
+              progressFill.style.width = '60%';
+              var canvas = document.createElement('canvas');
+              canvas.width = img.naturalWidth;
+              canvas.height = img.naturalHeight;
+              var ctx = canvas.getContext('2d');
+              if (!ctx) {
+                alert('Canvas not supported in this browser.');
+                reset();
+                return;
+              }
+              ctx.drawImage(img, 0, 0);
+              progressFill.style.width = '85%';
+              canvas.toBlob(
+                function (blob) {
+                  if (!blob) {
+                    alert('Conversion failed.');
+                    reset();
+                    return;
+                  }
+                  progressFill.style.width = '100%';
+                  var origUrl = ev.target.result;
+                  var webpUrl = URL.createObjectURL(blob);
+                  originalImg.src = origUrl;
+                  convertedImg.src = webpUrl;
+                  origSize.textContent = formatBytes(file.size);
+                  newSize.textContent = formatBytes(blob.size);
+                  var saved = Math.round(
+                    ((file.size - blob.size) / file.size) * 100
+                  );
+                  savings.textContent =
+                    saved >= 0 ? '−' + saved + '%' : '+' + Math.abs(saved) + '%';
+                  downloadLink.href = webpUrl;
+                  var base = file.name.replace(/\.[^.]+$/, '');
+                  downloadLink.setAttribute(
+                    'download',
+                    base + '.webp'
+                  );
+                  setTimeout(function () {
+                    showState('working');
+                  }, 200);
+                },
+                'image/webp',
+                0.85
+              );
+            };
+            img.onerror = function () {
+              alert('Could not read that image.');
+              reset();
+            };
+            img.src = ev.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+      })();
+    </script>
+  </body>
+</html>

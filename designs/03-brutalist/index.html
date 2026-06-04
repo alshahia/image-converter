@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CONVERT! — The loudest image converter on the internet</title>
+    <meta
+      name="description"
+      content="Convert, resize, and crush your images. No accounts. No server. No nonsense."
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #0a0a0a;
+        --paper: #fff8e7;
+        --lime: #c5ff00;
+        --pink: #ff3ea5;
+        --blue: #2c5cff;
+        --yellow: #ffd60a;
+        --orange: #ff6b1a;
+        --border: 3px solid var(--ink);
+        --border-thick: 5px solid var(--ink);
+        --shadow: 6px 6px 0 var(--ink);
+        --shadow-lg: 10px 10px 0 var(--ink);
+        --shadow-sm: 4px 4px 0 var(--ink);
+      }
+      html,
+      body {
+        background: var(--paper);
+        color: var(--ink);
+        font-family: "Space Grotesk", system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        background-image: radial-gradient(circle, rgba(10, 10, 10, 0.04) 1px, transparent 1px);
+        background-size: 20px 20px;
+      }
+      .font-black {
+        font-family: "Archivo Black", sans-serif;
+        letter-spacing: -0.02em;
+      }
+      .font-mono {
+        font-family: "Space Mono", monospace;
+      }
+      .hard {
+        border: var(--border);
+        box-shadow: var(--shadow);
+        background: white;
+      }
+      .hard-thick {
+        border: var(--border-thick);
+        box-shadow: var(--shadow-lg);
+      }
+      .hard-sm {
+        border: var(--border);
+        box-shadow: var(--shadow-sm);
+      }
+      .hard:hover {
+        transform: translate(-2px, -2px);
+        box-shadow: 10px 10px 0 var(--ink);
+      }
+      .hard:active {
+        transform: translate(2px, 2px);
+        box-shadow: 2px 2px 0 var(--ink);
+      }
+      .btn-primary {
+        background: var(--lime);
+        color: var(--ink);
+        font-weight: 700;
+        font-size: 18px;
+        padding: 18px 36px;
+        border: var(--border-thick);
+        box-shadow: var(--shadow-lg);
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        transition: all 100ms ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .btn-primary:hover {
+        transform: translate(-3px, -3px);
+        box-shadow: 13px 13px 0 var(--ink);
+        background: #d4ff33;
+      }
+      .btn-primary:active {
+        transform: translate(4px, 4px);
+        box-shadow: 2px 2px 0 var(--ink);
+      }
+      .btn-secondary {
+        background: white;
+        color: var(--ink);
+        font-weight: 700;
+        font-size: 18px;
+        padding: 18px 36px;
+        border: var(--border-thick);
+        box-shadow: var(--shadow-lg);
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        transition: all 100ms ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .btn-secondary:hover {
+        transform: translate(-3px, -3px);
+        box-shadow: 13px 13px 0 var(--ink);
+        background: var(--yellow);
+      }
+      .btn-secondary:active {
+        transform: translate(4px, 4px);
+        box-shadow: 2px 2px 0 var(--ink);
+      }
+      .upload-zone {
+        background: white;
+        border: 4px dashed var(--ink);
+        box-shadow: var(--shadow);
+        transition: all 200ms ease;
+      }
+      .upload-zone:hover {
+        background: var(--yellow);
+        transform: translate(-2px, -2px);
+        box-shadow: 10px 10px 0 var(--ink);
+      }
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        background: var(--ink);
+        color: var(--lime);
+        font-family: "Space Mono", monospace;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border: 2px solid var(--ink);
+      }
+      .tool-card {
+        position: relative;
+        transition: all 150ms ease;
+      }
+      .tool-card:hover {
+        transform: translate(-3px, -3px) rotate(-0.5deg);
+      }
+      .marquee {
+        background: var(--ink);
+        color: var(--lime);
+        overflow: hidden;
+        white-space: nowrap;
+        border-top: var(--border-thick);
+        border-bottom: var(--border-thick);
+      }
+      .marquee-inner {
+        display: inline-flex;
+        gap: 40px;
+        padding: 16px 0;
+        animation: scroll 30s linear infinite;
+        font-family: "Archivo Black", sans-serif;
+        font-size: 24px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .marquee-inner span {
+        display: inline-flex;
+        align-items: center;
+        gap: 40px;
+      }
+      .marquee-inner span::after {
+        content: "★";
+        color: var(--pink);
+        font-size: 18px;
+      }
+      @keyframes scroll {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-50%); }
+      }
+      .blob-pink {
+        position: absolute;
+        width: 200px;
+        height: 200px;
+        background: var(--pink);
+        border: var(--border-thick);
+        border-radius: 50%;
+        box-shadow: var(--shadow);
+      }
+      .blob-blue {
+        position: absolute;
+        width: 140px;
+        height: 140px;
+        background: var(--blue);
+        border: var(--border-thick);
+        transform: rotate(15deg);
+        box-shadow: var(--shadow);
+      }
+      .sticker {
+        position: absolute;
+        background: var(--yellow);
+        border: var(--border);
+        padding: 6px 12px;
+        font-family: "Space Mono", monospace;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        box-shadow: var(--shadow-sm);
+        transform: rotate(-6deg);
+      }
+      .rotate-slight {
+        transform: rotate(-1deg);
+      }
+      .rotate-more {
+        transform: rotate(2deg);
+      }
+      .squiggle {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='12' viewBox='0 0 40 12' fill='none'%3E%3Cpath d='M0 6 Q 10 0 20 6 T 40 6' stroke='%230a0a0a' stroke-width='3' fill='none'/%3E%3C/svg%3E");
+        background-repeat: repeat-x;
+        height: 12px;
+      }
+      .num-circle {
+        width: 44px;
+        height: 44px;
+        background: var(--ink);
+        color: var(--lime);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: "Archivo Black", sans-serif;
+        font-size: 18px;
+        flex-shrink: 0;
+      }
+      .arrow {
+        display: inline-block;
+        transition: transform 200ms ease;
+      }
+      .tool-card:hover .arrow {
+        transform: translateX(6px);
+      }
+    </style>
+  </head>
+  <body class="min-h-screen">
+    <!-- Marquee top -->
+    <div class="marquee">
+      <div class="marquee-inner">
+        <span>100% LOCAL</span>
+        <span>NO SIGN-UP</span>
+        <span>NO LIMITS</span>
+        <span>NO ADS</span>
+        <span>NO TRACKING</span>
+        <span>JUST FILES</span>
+        <span>100% LOCAL</span>
+        <span>NO SIGN-UP</span>
+        <span>NO LIMITS</span>
+        <span>NO ADS</span>
+        <span>NO TRACKING</span>
+        <span>JUST FILES</span>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <header class="border-b-[5px] border-[#0a0a0a] bg-white">
+      <div class="max-w-7xl mx-auto px-4 md:px-8 py-4 flex items-center justify-between">
+        <a href="#" class="flex items-center gap-3">
+          <div
+            class="w-12 h-12 bg-[var(--lime)] border-[3px] border-[#0a0a0a] flex items-center justify-center shadow-[4px_4px_0_#0a0a0a]"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+          </div>
+          <span class="font-black text-3xl tracking-tight">CONVERT<span class="text-[var(--pink)]">!</span></span>
+        </a>
+        <nav class="hidden md:flex items-center gap-2 font-bold text-sm uppercase">
+          <a href="#tools" class="px-3 py-2 border-2 border-transparent hover:border-[#0a0a0a] transition-colors">Tools</a>
+          <a href="#why" class="px-3 py-2 border-2 border-transparent hover:border-[#0a0a0a] transition-colors">Why?</a>
+          <a href="#faq" class="px-3 py-2 border-2 border-transparent hover:border-[#0a0a0a] transition-colors">FAQ</a>
+        </nav>
+        <a href="#tools" class="bg-[#0a0a0a] text-[var(--lime)] px-4 py-2 font-bold uppercase text-sm border-[3px] border-[#0a0a0a] hover:bg-[var(--pink)] hover:text-[#0a0a0a] transition-colors">
+          Get in →
+        </a>
+      </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="relative overflow-hidden border-b-[5px] border-[#0a0a0a] bg-[var(--paper)]">
+      <div class="blob-pink" style="top: 80px; right: 6%; transform: rotate(15deg); border-radius: 40% 60% 50% 50%;"></div>
+      <div class="blob-blue" style="top: 280px; right: 18%; transform: rotate(-8deg);"></div>
+      <div class="sticker" style="top: 130px; left: 5%;">NO BS!</div>
+      <div class="sticker" style="bottom: 60px; left: 8%; transform: rotate(8deg); background: var(--lime);">FREE 4EVER</div>
+
+      <div class="relative max-w-7xl mx-auto px-4 md:px-8 py-16 md:py-24">
+        <div class="max-w-4xl">
+          <div class="flex flex-wrap items-center gap-3 mb-8">
+            <span class="tag">⚡ WebAssembly</span>
+            <span class="tag" style="background: var(--pink); color: var(--ink);">🔥 11 tools</span>
+            <span class="tag" style="background: white; color: var(--ink);">🛡 0 uploads</span>
+          </div>
+
+          <h1 class="font-black text-6xl md:text-8xl lg:text-9xl leading-[0.85] mb-8">
+            CONVERT<br />
+            <span class="inline-block bg-[var(--lime)] px-3 -rotate-2 border-[5px] border-[#0a0a0a] shadow-[8px_8px_0_#0a0a0a]">IMAGES</span><br />
+            <span class="text-[var(--pink)]">LIKE A</span><br />
+            <span class="inline-block bg-[#0a0a0a] text-[var(--paper)] px-3 rotate-1">BOSS.</span>
+          </h1>
+
+          <p class="text-xl md:text-2xl font-bold max-w-2xl mb-10 leading-tight">
+            The loudest, fastest, most over-the-top image converter on the open web.
+            Drop a file, get a file. <span class="bg-[var(--yellow)] px-1">Your file stays on your machine.</span> Always.
+          </p>
+
+          <div class="flex flex-wrap items-center gap-4">
+            <a href="#tools" class="btn-primary">
+              Pick a tool
+              <span class="arrow">→</span>
+            </a>
+            <a href="#how" class="btn-secondary">
+              How it works
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Upload zone -->
+    <section class="border-b-[5px] border-[#0a0a0a] bg-white">
+      <div class="max-w-7xl mx-auto px-4 md:px-8 py-12">
+        <div class="upload-zone p-10 md:p-16 text-center">
+          <div class="inline-block bg-[var(--yellow)] border-[3px] border-[#0a0a0a] px-4 py-1 mb-6 font-mono text-sm font-bold uppercase shadow-[4px_4px_0_#0a0a0a]">
+            step 01 → drop file
+          </div>
+          <h2 class="font-black text-4xl md:text-6xl mb-4">
+            THROW A FILE<br />AT THIS BOX.
+          </h2>
+          <p class="text-lg font-bold mb-8 max-w-xl mx-auto">
+            Click anywhere. Drag from your desktop. Or paste a URL if you're feeling fancy.
+          </p>
+          <div class="flex flex-wrap items-center justify-center gap-2">
+            <span class="px-3 py-1 bg-[var(--lime)] border-[3px] border-[#0a0a0a] font-mono font-bold text-sm">.JPG</span>
+            <span class="px-3 py-1 bg-[var(--pink)] border-[3px] border-[#0a0a0a] text-white font-mono font-bold text-sm">.PNG</span>
+            <span class="px-3 py-1 bg-[var(--blue)] border-[3px] border-[#0a0a0a] text-white font-mono font-bold text-sm">.WEBP</span>
+            <span class="px-3 py-1 bg-[var(--yellow)] border-[3px] border-[#0a0a0a] font-mono font-bold text-sm">.HEIC</span>
+            <span class="px-3 py-1 bg-white border-[3px] border-[#0a0a0a] font-mono font-bold text-sm">.GIF</span>
+            <span class="px-3 py-1 bg-[#0a0a0a] text-[var(--lime)] border-[3px] border-[#0a0a0a] font-mono font-bold text-sm">.MP4</span>
+            <span class="px-3 py-1 bg-[#0a0a0a] text-white border-[3px] border-[#0a0a0a] font-mono font-bold text-sm">.MOV</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tools grid -->
+    <section id="tools" class="border-b-[5px] border-[#0a0a0a] bg-[var(--paper)] py-16 md:py-24">
+      <div class="max-w-7xl mx-auto px-4 md:px-8">
+        <div class="mb-12 flex items-end justify-between flex-wrap gap-4">
+          <h2 class="font-black text-5xl md:text-7xl">
+            THE <span class="bg-[var(--lime)] px-2 -rotate-2 inline-block border-[5px] border-[#0a0a0a] shadow-[6px_6px_0_#0a0a0a]">ARSENAL</span>
+          </h2>
+          <p class="font-mono text-sm font-bold">11 tools · 0 server · ∞ conversions</p>
+        </div>
+
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Featured big card -->
+          <a href="#" class="tool-card md:col-span-2 lg:col-span-3 hard-thick p-8 bg-[var(--lime)] flex items-center justify-between flex-wrap gap-6">
+            <div>
+              <div class="font-mono text-sm font-bold mb-2 uppercase">⭐ The flagship</div>
+              <h3 class="font-black text-4xl md:text-5xl mb-2">IMAGE CONVERTER</h3>
+              <p class="text-lg font-bold max-w-2xl">
+                The one that started it all. JPG ↔ PNG ↔ WebP, with full quality control
+                and EXIF stripping baked in.
+              </p>
+            </div>
+            <div class="font-black text-7xl md:text-9xl text-[#0a0a0a]/20">→</div>
+          </a>
+
+          <a href="#" class="tool-card hard p-6 bg-white">
+            <div class="flex items-start justify-between mb-4">
+              <div class="num-circle">01</div>
+              <span class="font-mono text-xs font-bold uppercase bg-[var(--yellow)] border-2 border-[#0a0a0a] px-2 py-1">JPG</span>
+            </div>
+            <h3 class="font-black text-2xl mb-1">JPG → PNG</h3>
+            <p class="text-sm font-bold opacity-70">Lossless, full color.</p>
+            <div class="mt-4 font-black text-2xl arrow">→</div>
+          </a>
+
+          <a href="#" class="tool-card hard p-6 bg-[var(--pink)] text-white">
+            <div class="flex items-start justify-between mb-4">
+              <div class="num-circle" style="background: white; color: var(--ink);">02</div>
+              <span class="font-mono text-xs font-bold uppercase bg-[#0a0a0a] text-[var(--lime)] border-2 border-[#0a0a0a] px-2 py-1">PNG</span>
+            </div>
+            <h3 class="font-black text-2xl mb-1">PNG → JPG</h3>
+            <p class="text-sm font-bold opacity-90">Drop transparency, gain compatibility.</p>
+            <div class="mt-4 font-black text-2xl arrow">→</div>
+          </a>
+
+          <a href="#" class="tool-card hard p-6 bg-[var(--blue)] text-white">
+            <div class="flex items-start justify-between mb-4">
+              <div class="num-circle" style="background: var(--lime); color: var(--ink);">03</div>
+              <span class="font-mono text-xs font-bold uppercase bg-white text-[#0a0a0a] border-2 border-[#0a0a0a] px-2 py-1">MODERN</span>
+            </div>
+            <h3 class="font-black text-2xl mb-1">JPG → WebP</h3>
+            <p class="text-sm font-bold opacity-90">Smaller files, same pixels.</p>
+            <div class="mt-4 font-black text-2xl arrow">→</div>
+          </a>
+
+          <a href="#" class="tool-card hard p-6 bg-[var(--yellow)]">
+            <div class="flex items-start justify-between mb-4">
+              <div class="num-circle">04</div>
+              <span class="font-mono text-xs font-bold uppercase bg-white border-2 border-[#0a0a0a] px-2 py-1">REVERSE</span>
+            </div>
+            <h3 class="font-black text-2xl mb-1">WebP → JPG</h3>
+            <p class="text-sm font-bold opacity-70">Back to a format everyone knows.</p>
+            <div class="mt-4 font-black text-2xl arrow">→</div>
+          </a>
+
+          <a href="#" class="tool-card hard p-6 bg-white">
+            <div class="flex items-start justify-between mb-4">
+              <div class="num-circle">05</div>
+              <span class="font-mono text-xs font-bold uppercase bg-[var(--orange)] text-white border-2 border-[#0a0a0a] px-2 py-1">iPHONE</span>
+            </div>
+            <h3 class="font-black text-2xl mb-1">HEIC → JPG</h3>
+            <p class="text-sm font-bold opacity-70">Liberate your iPhone photos.</p>
+            <div class="mt-4 font-black text-2xl arrow">→</div>
+          </a>
+
+          <a href="#" class="tool-card hard p-6 bg-[#0a0a0a] text-[var(--lime)]">
+            <div class="flex items-start justify-between mb-4">
+              <div class="num-circle" style="background: var(--lime); color: var(--ink);">06</div>
+              <span class="font-mono text-xs font-bold uppercase bg-[var(--pink)] text-white border-2 border-white px-2 py-1">CRUSH</span>
+            </div>
+            <h3 class="font-black text-2xl mb-1">COMPRESS</h3>
+            <p class="text-sm font-bold opacity-90">Slim down. Look the same.</p>
+            <div class="mt-4 font-black text-2xl arrow">→</div>
+          </a>
+
+          <a href="#" class="tool-card hard p-6 bg-white">
+            <div class="flex items-start justify-between mb-4">
+              <div class="num-circle">07</div>
+              <span class="font-mono text-xs font-bold uppercase bg-[var(--blue)] text-white border-2 border-[#0a0a0a] px-2 py-1">RESIZE</span>
+            </div>
+            <h3 class="font-black text-2xl mb-1">RESIZE</h3>
+            <p class="text-sm font-bold opacity-70">Exact dimensions, locked ratios.</p>
+            <div class="mt-4 font-black text-2xl arrow">→</div>
+          </a>
+
+          <a href="#" class="tool-card hard p-6 bg-[var(--orange)] text-white">
+            <div class="flex items-start justify-between mb-4">
+              <div class="num-circle" style="background: white; color: var(--ink);">08</div>
+              <span class="font-mono text-xs font-bold uppercase bg-[#0a0a0a] text-white border-2 border-[#0a0a0a] px-2 py-1">PRIVACY</span>
+            </div>
+            <h3 class="font-black text-2xl mb-1">STRIP EXIF</h3>
+            <p class="text-sm font-bold opacity-90">Kill the metadata. Keep the pixels.</p>
+            <div class="mt-4 font-black text-2xl arrow">→</div>
+          </a>
+
+          <a href="#" class="tool-card hard p-6 bg-white">
+            <div class="flex items-start justify-between mb-4">
+              <div class="num-circle">09</div>
+              <span class="font-mono text-xs font-bold uppercase bg-[#0a0a0a] text-[var(--lime)] border-2 border-[#0a0a0a] px-2 py-1">VIDEO</span>
+            </div>
+            <h3 class="font-black text-2xl mb-1">VIDEO → MP4</h3>
+            <p class="text-sm font-bold opacity-70">Re-encode anything into MP4.</p>
+            <div class="mt-4 font-black text-2xl arrow">→</div>
+          </a>
+
+          <a href="#" class="tool-card hard p-6 bg-[var(--lime)]">
+            <div class="flex items-start justify-between mb-4">
+              <div class="num-circle">10</div>
+              <span class="font-mono text-xs font-bold uppercase bg-[var(--pink)] text-white border-2 border-[#0a0a0a] px-2 py-1">LOOP</span>
+            </div>
+            <h3 class="font-black text-2xl mb-1">VIDEO → GIF</h3>
+            <p class="text-sm font-bold opacity-70">Pick a window. Get a loop.</p>
+            <div class="mt-4 font-black text-2xl arrow">→</div>
+          </a>
+
+          <a href="#" class="tool-card hard p-6 bg-[var(--blue)] text-white">
+            <div class="flex items-start justify-between mb-4">
+              <div class="num-circle" style="background: var(--yellow); color: var(--ink);">11</div>
+              <span class="font-mono text-xs font-bold uppercase bg-white text-[#0a0a0a] border-2 border-[#0a0a0a] px-2 py-1">AUDIO</span>
+            </div>
+            <h3 class="font-black text-2xl mb-1">EXTRACT AUDIO</h3>
+            <p class="text-sm font-bold opacity-90">Pull an MP3 out of any video.</p>
+            <div class="mt-4 font-black text-2xl arrow">→</div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Marquee mid -->
+    <div class="marquee" style="background: var(--pink); border-color: var(--ink);">
+      <div class="marquee-inner" style="color: var(--ink);">
+        <span>BULLETPROOF</span>
+        <span>OFFLINE-READY</span>
+        <span>OPEN-SOURCE</span>
+        <span>ZERO-KNOWLEDGE</span>
+        <span>YOUR FILES, YOUR MACHINE</span>
+        <span>BULLETPROOF</span>
+        <span>OFFLINE-READY</span>
+        <span>OPEN-SOURCE</span>
+        <span>ZERO-KNOWLEDGE</span>
+        <span>YOUR FILES, YOUR MACHINE</span>
+      </div>
+    </div>
+
+    <!-- Why -->
+    <section id="why" class="border-b-[5px] border-[#0a0a0a] bg-white py-16 md:py-24">
+      <div class="max-w-7xl mx-auto px-4 md:px-8">
+        <h2 class="font-black text-5xl md:text-7xl mb-12 text-center">
+          WHY DOES THIS <span class="bg-[var(--lime)] px-2 -rotate-1 inline-block border-[5px] border-[#0a0a0a] shadow-[6px_6px_0_#0a0a0a]">EXIST</span>?
+        </h2>
+
+        <div class="grid md:grid-cols-3 gap-6">
+          <div class="hard-thick p-8 bg-[var(--lime)]">
+            <div class="font-black text-6xl mb-4">01.</div>
+            <h3 class="font-black text-2xl mb-3">YOUR PHOTOS ARE YOURS.</h3>
+            <p class="font-bold">
+              Every other converter uploads your file to a server in a country you can't
+              pronounce. Not us. We don't have a server.
+            </p>
+          </div>
+          <div class="hard-thick p-8 bg-[var(--pink)] text-white">
+            <div class="font-black text-6xl mb-4">02.</div>
+            <h3 class="font-black text-2xl mb-3">NO ACCOUNTS, NO LIMITS.</h3>
+            <p class="font-bold">
+              Convert 1 image or 1,000. We don't count. We don't even know. Open the tab,
+              do the thing, close the tab. That's it.
+            </p>
+          </div>
+          <div class="hard-thick p-8 bg-[var(--blue)] text-white">
+            <div class="font-black text-6xl mb-4">03.</div>
+            <h3 class="font-black text-2xl mb-3">WORKS ON A PLANE.</h3>
+            <p class="font-bold">
+              Once you've loaded the app, it works without the internet. Convert files in
+              a basement, a bunker, or a basement-bunker.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq" class="border-b-[5px] border-[#0a0a0a] bg-[var(--paper)] py-16 md:py-24">
+      <div class="max-w-4xl mx-auto px-4 md:px-8">
+        <h2 class="font-black text-5xl md:text-7xl mb-12">
+          FAQ<span class="text-[var(--pink)]">.</span>
+        </h2>
+
+        <div class="space-y-4">
+          <details class="hard bg-white p-6 group">
+            <summary class="font-black text-xl cursor-pointer flex items-center justify-between">
+              Is it really free?
+              <span class="font-black text-2xl group-open:rotate-45 transition-transform">+</span>
+            </summary>
+            <p class="mt-4 font-bold">
+              Yes. No ads, no upsells, no premium tier. The whole thing is a few hundred
+              kilobytes of WebAssembly. The bandwidth cost is on us.
+            </p>
+          </details>
+          <details class="hard bg-white p-6 group">
+            <summary class="font-black text-xl cursor-pointer flex items-center justify-between">
+              Where do my files go?
+              <span class="font-black text-2xl group-open:rotate-45 transition-transform">+</span>
+            </summary>
+            <p class="mt-4 font-bold">
+              Nowhere. They live in your browser's memory until you close the tab, and
+              then they're gone. We literally cannot see them.
+            </p>
+          </details>
+          <details class="hard bg-white p-6 group">
+            <summary class="font-black text-xl cursor-pointer flex items-center justify-between">
+              Why does it look like a 1995 zine?
+              <span class="font-black text-2xl group-open:rotate-45 transition-transform">+</span>
+            </summary>
+            <p class="mt-4 font-bold">
+              Because we like 1995 zines. And because brutalism is honest: thick borders
+              and flat colour don't lie to you about what something is.
+            </p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-[#0a0a0a] text-[var(--paper)] py-12">
+      <div class="max-w-7xl mx-auto px-4 md:px-8">
+        <div class="grid md:grid-cols-2 gap-8 items-end">
+          <div>
+            <p class="font-black text-5xl md:text-6xl mb-4">
+              GO <span class="text-[var(--lime)]">CONVERT</span> THINGS.
+            </p>
+            <a href="#tools" class="btn-primary">
+              Open the app
+              <span class="arrow">→</span>
+            </a>
+          </div>
+          <div class="md:text-right space-y-2 font-mono text-sm">
+            <p>MIT licensed. Source on GitHub.</p>
+            <p>Built with WebAssembly &amp; stubbornness.</p>
+            <p>© 2026 — No cookies, no tracking, no BS.</p>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

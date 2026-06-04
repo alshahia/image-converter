@@ -1,0 +1,768 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>imgconv ~ image tools for the command-line crowd</title>
+    <meta
+      name="description"
+      content="A small, sharp image converter for people who like their tools close to the metal."
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0c0c0d;
+        --bg-elev: #131316;
+        --bg-soft: #18181c;
+        --fg: #d4d4d4;
+        --fg-muted: #7a7a7a;
+        --fg-subtle: #4a4a4a;
+        --green: #7ee787;
+        --green-dim: #4a8a52;
+        --green-glow: rgba(126, 231, 135, 0.15);
+        --amber: #ffa657;
+        --blue: #79c0ff;
+        --pink: #ff7b9c;
+        --purple: #d2a8ff;
+        --red: #ff6b6b;
+        --border: #2a2a2e;
+        --border-strong: #3a3a3e;
+        --selection: rgba(126, 231, 135, 0.3);
+      }
+      html,
+      body {
+        background: var(--bg);
+        color: var(--fg);
+        font-family: "JetBrains Mono", "Cascadia Code", "Fira Code", monospace;
+        -webkit-font-smoothing: antialiased;
+        font-feature-settings: "calt" 0, "liga" 0;
+      }
+      ::selection {
+        background: var(--selection);
+        color: white;
+      }
+      .text-mono {
+        font-family: "JetBrains Mono", monospace;
+      }
+      .text-green { color: var(--green); }
+      .text-amber { color: var(--amber); }
+      .text-blue { color: var(--blue); }
+      .text-pink { color: var(--pink); }
+      .text-purple { color: var(--purple); }
+      .text-muted { color: var(--fg-muted); }
+      .text-subtle { color: var(--fg-subtle); }
+      .bg-elev { background: var(--bg-elev); }
+      .bg-soft { background: var(--bg-soft); }
+      .border-line { border: 1px solid var(--border); }
+      .border-line-strong { border: 1px solid var(--border-strong); }
+
+      .scanlines {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background: repeating-linear-gradient(
+          0deg,
+          rgba(255, 255, 255, 0.015) 0px,
+          rgba(255, 255, 255, 0.015) 1px,
+          transparent 1px,
+          transparent 3px
+        );
+        z-index: 100;
+      }
+      .vignette {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.5) 100%);
+        z-index: 99;
+      }
+      .grain {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.03;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        z-index: 98;
+      }
+
+      .prompt::before {
+        content: "$ ";
+        color: var(--green);
+      }
+      .prompt-arrow::before {
+        content: "❯ ";
+        color: var(--green);
+      }
+      .comment {
+        color: var(--fg-muted);
+      }
+      .comment::before {
+        content: "# ";
+        color: var(--fg-subtle);
+      }
+      .string {
+        color: var(--amber);
+      }
+      .keyword {
+        color: var(--pink);
+      }
+      .function {
+        color: var(--blue);
+      }
+      .type {
+        color: var(--purple);
+      }
+      .number {
+        color: var(--green);
+      }
+
+      .cursor {
+        display: inline-block;
+        width: 8px;
+        height: 16px;
+        background: var(--green);
+        animation: blink 1s steps(2) infinite;
+        vertical-align: text-bottom;
+      }
+      @keyframes blink {
+        0%, 50% { opacity: 1; }
+        51%, 100% { opacity: 0; }
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border: 1px solid var(--border-strong);
+        background: var(--bg-soft);
+        color: var(--fg);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 13px;
+        transition: all 150ms ease;
+        cursor: pointer;
+      }
+      .btn:hover {
+        border-color: var(--green);
+        color: var(--green);
+        background: var(--green-glow);
+      }
+      .btn-primary {
+        background: var(--green);
+        color: var(--bg);
+        border-color: var(--green);
+        font-weight: 600;
+      }
+      .btn-primary:hover {
+        background: transparent;
+        color: var(--green);
+        box-shadow: 0 0 12px var(--green-glow);
+      }
+
+      .tool-row {
+        display: grid;
+        grid-template-columns: 32px 1fr auto auto;
+        gap: 16px;
+        align-items: center;
+        padding: 12px 16px;
+        border: 1px solid var(--border);
+        background: var(--bg-elev);
+        transition: all 150ms ease;
+        position: relative;
+        cursor: pointer;
+      }
+      .tool-row:hover {
+        border-color: var(--green-dim);
+        background: var(--bg-soft);
+        transform: translateX(4px);
+      }
+      .tool-row:hover .tool-arrow {
+        color: var(--green);
+        transform: translateX(4px);
+      }
+      .tool-row:hover .tool-num {
+        color: var(--green);
+      }
+      .tool-num {
+        color: var(--fg-subtle);
+        font-size: 12px;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        transition: color 150ms ease;
+      }
+      .tool-arrow {
+        color: var(--fg-subtle);
+        transition: all 150ms ease;
+      }
+      .tool-name {
+        color: var(--fg);
+        font-weight: 500;
+      }
+      .tool-desc {
+        color: var(--fg-muted);
+        font-size: 12px;
+      }
+      .tool-tag {
+        font-size: 10px;
+        padding: 2px 6px;
+        border: 1px solid var(--border-strong);
+        color: var(--fg-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .status-dot {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 8px var(--green);
+        animation: pulse 2s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+
+      .ascii-art {
+        white-space: pre;
+        font-size: 8px;
+        line-height: 1.1;
+        color: var(--green);
+        text-shadow: 0 0 10px var(--green-glow);
+        font-family: "JetBrains Mono", monospace;
+        letter-spacing: 0;
+        overflow-x: auto;
+      }
+      @media (min-width: 768px) {
+        .ascii-art { font-size: 10px; }
+      }
+      @media (min-width: 1024px) {
+        .ascii-art { font-size: 12px; }
+      }
+
+      .marquee {
+        overflow: hidden;
+        white-space: nowrap;
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-soft);
+      }
+      .marquee-inner {
+        display: inline-block;
+        animation: scroll 40s linear infinite;
+        font-size: 11px;
+        color: var(--fg-muted);
+        padding: 8px 0;
+        letter-spacing: 0.1em;
+      }
+      @keyframes scroll {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-50%); }
+      }
+
+      .code-block {
+        background: var(--bg-elev);
+        border: 1px solid var(--border);
+        padding: 16px;
+        font-size: 13px;
+        line-height: 1.7;
+        overflow-x: auto;
+      }
+      .code-block .ln {
+        color: var(--fg-subtle);
+        user-select: none;
+        display: inline-block;
+        width: 24px;
+        text-align: right;
+        margin-right: 16px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .tab-active {
+        background: var(--bg-soft);
+        color: var(--green);
+        border-bottom: 1px solid var(--green);
+      }
+      .tab {
+        padding: 8px 16px;
+        color: var(--fg-muted);
+        border-bottom: 1px solid transparent;
+        transition: all 150ms ease;
+        cursor: pointer;
+      }
+      .tab:hover {
+        color: var(--fg);
+      }
+
+      .upload-zone {
+        background: var(--bg-elev);
+        border: 1px dashed var(--border-strong);
+        padding: 48px 24px;
+        text-align: center;
+        transition: all 200ms ease;
+        cursor: pointer;
+      }
+      .upload-zone:hover {
+        border-color: var(--green);
+        background: var(--green-glow);
+      }
+    </style>
+  </head>
+  <body class="min-h-screen">
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+    <div class="grain"></div>
+
+    <!-- Top status bar -->
+    <div class="bg-soft border-b border-line">
+      <div class="max-w-6xl mx-auto px-4 md:px-6 py-1.5 flex items-center justify-between text-[10px] md:text-xs">
+        <div class="flex items-center gap-3">
+          <span class="text-subtle">~/imgconv</span>
+          <span class="text-subtle">·</span>
+          <span class="text-muted">main</span>
+          <span class="text-subtle">·</span>
+          <span class="flex items-center gap-1.5">
+            <span class="status-dot"></span>
+            <span class="text-green">11 tools online</span>
+          </span>
+        </div>
+        <div class="flex items-center gap-3 text-subtle">
+          <span class="hidden sm:inline">v1.0.0</span>
+          <span class="hidden sm:inline">·</span>
+          <span id="uptime">uptime: 99.99%</span>
+          <span>·</span>
+          <span id="latency">12ms</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <header class="border-b border-line">
+      <div class="max-w-6xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
+        <a href="#" class="flex items-center gap-2.5">
+          <span class="text-green">▣</span>
+          <span class="font-bold tracking-tight">imgconv</span>
+        </a>
+        <nav class="hidden md:flex items-center gap-1 text-sm">
+          <a href="#tools" class="px-3 py-1.5 text-muted hover:text-green transition-colors">./tools</a>
+          <a href="#cli" class="px-3 py-1.5 text-muted hover:text-green transition-colors">./cli</a>
+          <a href="#docs" class="px-3 py-1.5 text-muted hover:text-green transition-colors">./docs</a>
+          <a href="#" class="px-3 py-1.5 text-muted hover:text-green transition-colors">./git</a>
+        </nav>
+        <a href="#tools" class="btn btn-primary">
+          <span>open</span>
+          <span>→</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="border-b border-line">
+      <div class="max-w-6xl mx-auto px-4 md:px-6 py-12 md:py-20">
+        <div class="grid lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <div class="mb-6 text-xs">
+              <div class="text-muted">last login: <span class="text-fg">tue jun 4 09:42:17</span> on tty1</div>
+            </div>
+
+            <h1 class="text-3xl md:text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight mb-6">
+              <div><span class="text-green">$</span> <span class="text-fg">imgconv</span> <span class="text-amber">--help</span></div>
+              <div class="text-muted text-2xl md:text-3xl lg:text-4xl mt-3">
+                11 tools, 0 servers,<br />all in your browser.
+              </div>
+            </h1>
+
+            <p class="text-muted text-sm md:text-base leading-relaxed max-w-xl mb-8">
+              A small, sharp image converter for people who like their tools
+              close to the metal. Convert, compress, resize, strip metadata.
+              Your files never leave this tab.
+            </p>
+
+            <div class="flex flex-wrap items-center gap-3 mb-8">
+              <a href="#tools" class="btn btn-primary">
+                <span>$ open ./tools</span>
+              </a>
+              <a href="#cli" class="btn">
+                <span>cat README.md</span>
+              </a>
+            </div>
+
+            <div class="text-xs text-subtle space-y-1">
+              <div><span class="text-muted">→</span> no signup</div>
+              <div><span class="text-muted">→</span> no upload</div>
+              <div><span class="text-muted">→</span> no tracking</div>
+            </div>
+          </div>
+
+          <div class="bg-elev border border-line p-4 md:p-6">
+            <div class="text-xs text-subtle mb-3">// preview</div>
+            <pre class="ascii-art">        ╔══════════════════════════════╗
+        ║  ┌────┐  ┌────┐  ┌────┐     ║
+        ║  │ .jpg│→│ .png│→│ .webp│   ║
+        ║  └────┘  └────┘  └────┘     ║
+        ║                              ║
+        ║   100% LOCAL CONVERSION       ║
+        ║   no bytes uploaded           ║
+        ║                              ║
+        ╚══════════════════════════════╝</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Marquee -->
+    <div class="marquee">
+      <div class="marquee-inner">
+        [ OK ] 11/11 tools online · [ OK ] 0 servers · [ OK ] 0 bytes uploaded · [ OK ] 0 cookies · [ OK ] 0 trackers · [ OK ] open-source · [ OK ] MIT · [ OK ] 11/11 tools online · [ OK ] 0 servers · [ OK ] 0 bytes uploaded · [ OK ] 0 cookies · [ OK ] 0 trackers · [ OK ] open-source · [ OK ] MIT
+      </div>
+    </div>
+
+    <!-- Upload zone -->
+    <section class="border-b border-line">
+      <div class="max-w-6xl mx-auto px-4 md:px-6 py-12">
+        <div class="text-xs text-muted mb-3"># step 1 — select file</div>
+        <div class="upload-zone">
+          <div class="text-xs text-subtle mb-2">~/drop-here</div>
+          <div class="text-lg md:text-xl text-muted mb-2">
+            <span class="text-green">$</span> drop <span class="text-amber">./input</span> to begin
+          </div>
+          <p class="text-xs text-subtle max-w-md mx-auto">
+            or click anywhere in this zone. accept: .jpg .png .webp .heic .gif .mp4 .mov
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tools: command-list style -->
+    <section id="tools" class="border-b border-line">
+      <div class="max-w-6xl mx-auto px-4 md:px-6 py-16 md:py-24">
+        <div class="mb-10 flex items-end justify-between flex-wrap gap-4 border-b border-line pb-4">
+          <div>
+            <div class="text-xs text-subtle mb-2">~/imgconv $</div>
+            <h2 class="text-2xl md:text-3xl font-bold">ls <span class="text-amber">./tools</span> --all</h2>
+          </div>
+          <div class="text-xs text-muted">
+            <span class="text-green">11 results</span> · sorted alphabetically
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <a href="#" class="tool-row group">
+            <span class="tool-num">01</span>
+            <div>
+              <div class="tool-name">compress-image</div>
+              <div class="tool-desc">reduce file size while keeping visible quality</div>
+            </div>
+            <span class="tool-tag hidden sm:inline">image</span>
+            <span class="tool-arrow">→</span>
+          </a>
+          <a href="#" class="tool-row group">
+            <span class="tool-num">02</span>
+            <div>
+              <div class="tool-name">extract-audio</div>
+              <div class="tool-desc">pull an mp3 track from a video file</div>
+            </div>
+            <span class="tool-tag hidden sm:inline">video</span>
+            <span class="tool-arrow">→</span>
+          </a>
+          <a href="#" class="tool-row group">
+            <span class="tool-num">03</span>
+            <div>
+              <div class="tool-name">heic-to-jpg</div>
+              <div class="tool-desc">convert iphone photos into the universal jpg format</div>
+            </div>
+            <span class="tool-tag hidden sm:inline">image</span>
+            <span class="tool-arrow">→</span>
+          </a>
+          <a href="#" class="tool-row group">
+            <span class="tool-num">04</span>
+            <div>
+              <div class="tool-name">jpg-to-png</div>
+              <div class="tool-desc">lossless conversion with full color support</div>
+            </div>
+            <span class="tool-tag hidden sm:inline">image</span>
+            <span class="tool-arrow">→</span>
+          </a>
+          <a href="#" class="tool-row group">
+            <span class="tool-num">05</span>
+            <div>
+              <div class="tool-name">jpg-to-webp</div>
+              <div class="tool-desc">modern format, smaller payload, same pixels</div>
+            </div>
+            <span class="tool-tag hidden sm:inline">image</span>
+            <span class="tool-arrow">→</span>
+          </a>
+          <a href="#" class="tool-row group">
+            <span class="tool-num">06</span>
+            <div>
+              <div class="tool-name">png-to-jpg</div>
+              <div class="tool-desc">drop transparency, gain universal compatibility</div>
+            </div>
+            <span class="tool-tag hidden sm:inline">image</span>
+            <span class="tool-arrow">→</span>
+          </a>
+          <a href="#" class="tool-row group">
+            <span class="tool-num">07</span>
+            <div>
+              <div class="tool-name">resize-image</div>
+              <div class="tool-desc">exact dimensions or percentage scaling</div>
+            </div>
+            <span class="tool-tag hidden sm:inline">image</span>
+            <span class="tool-arrow">→</span>
+          </a>
+          <a href="#" class="tool-row group">
+            <span class="tool-num">08</span>
+            <div>
+              <div class="tool-name">strip-exif</div>
+              <div class="tool-desc">remove location, camera, and timestamp metadata</div>
+            </div>
+            <span class="tool-tag hidden sm:inline">privacy</span>
+            <span class="tool-arrow">→</span>
+          </a>
+          <a href="#" class="tool-row group">
+            <span class="tool-num">09</span>
+            <div>
+              <div class="tool-name">video-to-gif</div>
+              <div class="tool-desc">pick a window, get a perfect loop</div>
+            </div>
+            <span class="tool-tag hidden sm:inline">video</span>
+            <span class="tool-arrow">→</span>
+          </a>
+          <a href="#" class="tool-row group">
+            <span class="tool-num">10</span>
+            <div>
+              <div class="tool-name">video-to-mp4</div>
+              <div class="tool-desc">re-encode any video into a friendlier mp4</div>
+            </div>
+            <span class="tool-tag hidden sm:inline">video</span>
+            <span class="tool-arrow">→</span>
+          </a>
+          <a href="#" class="tool-row group">
+            <span class="tool-num">11</span>
+            <div>
+              <div class="tool-name">webp-to-jpg</div>
+              <div class="tool-desc">back to a format everyone knows how to open</div>
+            </div>
+            <span class="tool-tag hidden sm:inline">image</span>
+            <span class="tool-arrow">→</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- CLI section -->
+    <section id="cli" class="border-b border-line">
+      <div class="max-w-6xl mx-auto px-4 md:px-6 py-16 md:py-24">
+        <div class="grid lg:grid-cols-2 gap-12">
+          <div>
+            <div class="text-xs text-subtle mb-3"># how it works</div>
+            <h2 class="text-2xl md:text-3xl font-bold mb-4">
+              <span class="text-green">$</span> man imgconv
+            </h2>
+            <p class="text-muted text-sm md:text-base leading-relaxed mb-6 max-w-md">
+              We could write a marketing page. We chose to write documentation.
+              Read the source. Run the tool. It works the same in both places.
+            </p>
+            <ul class="text-sm space-y-2 text-muted">
+              <li class="flex items-start gap-2">
+                <span class="text-green mt-1">▸</span>
+                <span><span class="text-fg">WebAssembly</span> runs the codecs in your browser</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-green mt-1">▸</span>
+                <span><span class="text-fg">COOP/COEP</span> headers enable cross-origin isolation</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-green mt-1">▸</span>
+                <span><span class="text-fg">ffmpeg.wasm</span> handles every video and audio format</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-green mt-1">▸</span>
+                <span><span class="text-fg">jsquash</span> handles every image format</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-green mt-1">▸</span>
+                <span><span class="text-fg">piexifjs</span> strips metadata on the way out</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="bg-elev border border-line">
+            <div class="border-b border-line px-4 py-2 flex items-center gap-3 text-xs">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-[#ff5f57]"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-[#febc2e]"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-[#28c840]"></span>
+              </div>
+              <span class="text-subtle">~/imgconv — example.sh</span>
+            </div>
+            <div class="code-block">
+              <div><span class="ln">1</span><span class="comment">convert a folder of images</span></div>
+              <div><span class="ln">2</span><span class="text-green">$</span> imgconv <span class="text-amber">--in</span> ./photos <span class="text-amber">--out</span> ./web <span class="text-amber">--to</span> webp</div>
+              <div>&nbsp;</div>
+              <div><span class="ln">3</span><span class="comment">resize for thumbnails</span></div>
+              <div><span class="ln">4</span><span class="text-green">$</span> imgconv <span class="text-amber">--resize</span> 320x240 <span class="text-amber">--quality</span> 80</div>
+              <div>&nbsp;</div>
+              <div><span class="ln">5</span><span class="comment">strip metadata from a folder</span></div>
+              <div><span class="ln">6</span><span class="text-green">$</span> imgconv <span class="text-amber">--strip-exif</span> <span class="text-amber">--recursive</span></div>
+              <div>&nbsp;</div>
+              <div><span class="ln">7</span><span class="comment">convert a video to a 3-second gif</span></div>
+              <div><span class="ln">8</span><span class="text-green">$</span> imgconv <span class="text-amber">--in</span> clip.mov <span class="text-amber">--to</span> gif <span class="text-amber">--start</span> 0:02 <span class="text-amber">--len</span> 3</div>
+              <div>&nbsp;</div>
+              <div><span class="ln">9</span><span class="comment">~ 100% local. no upload, no queue.</span></div>
+              <div><span class="ln">10</span><span class="text-green">▌</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats / output -->
+    <section class="border-b border-line bg-soft">
+      <div class="max-w-6xl mx-auto px-4 md:px-6 py-16 md:py-20">
+        <div class="text-xs text-subtle mb-3"># output</div>
+        <h2 class="text-2xl md:text-3xl font-bold mb-10">imgconv <span class="text-amber">--stats</span></h2>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-px bg-[var(--border)] border border-line">
+          <div class="bg-[var(--bg)] p-6">
+            <div class="text-xs text-muted mb-1">tools</div>
+            <div class="text-3xl md:text-4xl font-bold text-green">11</div>
+            <div class="text-xs text-subtle mt-1">↑ 0 today</div>
+          </div>
+          <div class="bg-[var(--bg)] p-6">
+            <div class="text-xs text-muted mb-1">bytes uploaded</div>
+            <div class="text-3xl md:text-4xl font-bold">0</div>
+            <div class="text-xs text-subtle mt-1">↓ -100% vs cloud</div>
+          </div>
+          <div class="bg-[var(--bg)] p-6">
+            <div class="text-xs text-muted mb-1">avg. size saved</div>
+            <div class="text-3xl md:text-4xl font-bold text-amber">-78<span class="text-lg">%</span></div>
+            <div class="text-xs text-subtle mt-1">on compress</div>
+          </div>
+          <div class="bg-[var(--bg)] p-6">
+            <div class="text-xs text-muted mb-1">avg. time</div>
+            <div class="text-3xl md:text-4xl font-bold text-blue">2.3s</div>
+            <div class="text-xs text-subtle mt-1">per conversion</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Docs section -->
+    <section id="docs" class="border-b border-line">
+      <div class="max-w-6xl mx-auto px-4 md:px-6 py-16 md:py-20">
+        <div class="text-xs text-subtle mb-3"># frequently asked</div>
+        <h2 class="text-2xl md:text-3xl font-bold mb-10">cat <span class="text-amber">FAQ.md</span></h2>
+
+        <div class="space-y-px">
+          <details class="bg-elev border border-line group" open>
+            <summary class="cursor-pointer p-4 md:p-5 flex items-center justify-between gap-4 font-medium hover:text-green transition-colors">
+              <span><span class="text-green">Q:</span> where does my file go?</span>
+              <span class="text-muted group-open:rotate-45 transition-transform text-xl">+</span>
+            </summary>
+            <div class="px-4 md:px-5 pb-5 text-muted text-sm leading-relaxed border-t border-line">
+              <span class="text-green">A:</span> nowhere. it lives in the browser's memory until you close the tab.
+              the conversion runs in webassembly, locally, in your process.
+              we have no server. we couldn't see your file if we wanted to.
+            </div>
+          </details>
+          <details class="bg-elev border border-line group">
+            <summary class="cursor-pointer p-4 md:px-5 md:p-5 flex items-center justify-between gap-4 font-medium hover:text-green transition-colors">
+              <span><span class="text-green">Q:</span> is it really free?</span>
+              <span class="text-muted group-open:rotate-45 transition-transform text-xl">+</span>
+            </summary>
+            <div class="px-4 md:px-5 pb-5 text-muted text-sm leading-relaxed border-t border-line">
+              <span class="text-green">A:</span> yes. no ads, no premium tier, no count of how many files you've converted.
+              the source is MIT-licensed. if we ever add paid plans, you'll know first.
+            </div>
+          </details>
+          <details class="bg-elev border border-line group">
+            <summary class="cursor-pointer p-4 md:p-5 flex items-center justify-between gap-4 font-medium hover:text-green transition-colors">
+              <span><span class="text-green">Q:</span> why the terminal aesthetic?</span>
+              <span class="text-muted group-open:rotate-45 transition-transform text-xl">+</span>
+            </summary>
+            <div class="px-4 md:px-5 pb-5 text-muted text-sm leading-relaxed border-t border-line">
+              <span class="text-green">A:</span> because the tool is for people who type. a terminal
+              doesn't lie about what it is. neither do we.
+            </div>
+          </details>
+          <details class="bg-elev border border-line group">
+            <summary class="cursor-pointer p-4 md:p-5 flex items-center justify-between gap-4 font-medium hover:text-green transition-colors">
+              <span><span class="text-green">Q:</span> what formats are supported?</span>
+              <span class="text-muted group-open:rotate-45 transition-transform text-xl">+</span>
+            </summary>
+            <div class="px-4 md:px-5 pb-5 text-muted text-sm leading-relaxed border-t border-line">
+              <span class="text-green">A:</span> images: jpg, png, webp, heic, gif.
+              video: mp4, mov, webm, avi (re-encoded to mp4). audio: extracted to mp3.
+              if it's not on the list, open an issue.
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="border-b border-line">
+      <div class="max-w-3xl mx-auto px-4 md:px-6 py-16 md:py-24 text-center">
+        <div class="text-xs text-subtle mb-4">$ ./install --user</div>
+        <h2 class="text-3xl md:text-5xl font-bold mb-6 leading-tight">
+          <span class="text-green">$</span> open a tool<br />
+          <span class="text-muted">→</span> <span class="text-amber">drop a file</span><br />
+          <span class="text-muted">→</span> <span class="text-amber">get a file</span>
+        </h2>
+        <p class="text-muted text-sm md:text-base mb-8 max-w-xl mx-auto">
+          That's the whole interface. No accounts. No queue. No surprises.
+        </p>
+        <a href="#" class="btn btn-primary">
+          <span>$ open ./tools</span>
+          <span>→</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-soft">
+      <div class="max-w-6xl mx-auto px-4 md:px-6 py-8">
+        <div class="grid sm:grid-cols-3 gap-6 text-xs mb-6">
+          <div>
+            <div class="text-subtle mb-2">// about</div>
+            <div class="text-muted">imgconv v1.0.0</div>
+            <div class="text-muted">MIT · open source</div>
+          </div>
+          <div>
+            <div class="text-subtle mb-2">// build</div>
+            <div class="text-muted">react + vite + typescript</div>
+            <div class="text-muted">ffmpeg.wasm · jsquash</div>
+          </div>
+          <div>
+            <div class="text-subtle mb-2">// contact</div>
+            <div class="text-green">→ /git</div>
+            <div class="text-green">→ /issues</div>
+          </div>
+        </div>
+        <div class="text-xs text-subtle border-t border-line pt-4 flex items-center justify-between flex-wrap gap-2">
+          <span>© 2026 · made with webassembly</span>
+          <span>process exited 0</span>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      // Subtle live metrics to feel alive
+      const latency = document.getElementById("latency");
+      let l = 12;
+      setInterval(() => {
+        l = 8 + Math.floor(Math.random() * 12);
+        if (latency) latency.textContent = l + "ms";
+      }, 2000);
+    </script>
+  </body>
+</html>

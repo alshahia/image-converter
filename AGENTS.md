@@ -2,16 +2,24 @@
 
 ## Project state
 
-Pre-product. **No code yet.** No `package.json`, no `src/`, no `lib/`, no
-`pubspec.yaml`. The `research/` and `design/` folders contain planning
-documents, not source code. Do not run `bun install`, `npm install`, or
-any build command — there is nothing to build.
+**Phase A in progress** (polishing). Full codebase exists.
+
+- **Stack**: React + TypeScript + Vite + Vitest. Bun is package manager only.
+- **17 commits** on `main`. Git repo initialized at GitHub.
+- **85 tests passing** across 15 test files (unit + integration).
+- **12 dependencies** (`@ffmpeg/ffmpeg`, `@ffmpeg/util`, `jsquash`,
+  `idb-keyval`, `react-router-dom`, `piexifjs` — keep, see known issues,
+  `react`, `react-dom`) + **16 devDependencies** (Vite, Vitest,
+  TypeScript, Biome, Tailwind, PostCSS).
+- **11 tool routes** under `/` (kebab-case): `jpg-to-png`, `png-to-jpg`,
+  `jpg-to-webp`, `webp-to-jpg`, `heic-to-jpg`, `resize-image`,
+  `compress-image`, `strip-exif`, `video-to-mp4`, `video-to-gif`,
+  `extract-audio`.
+- **Vite dev/build** working. COOP/COEP headers in `public/_headers`.
+- ffmpeg-core files self-hosted in `public/ffmpeg/`.
 
 The folder path (`E:\flutter\image_convertor`) is a leftover from an
-earlier Flutter idea. The actual product is a browser-based React +
-TypeScript tool. Do not scaffold a Flutter app.
-
-The repo is not a git repo yet.
+earlier Flutter idea — ignore it. The product is a browser tool.
 
 ## Read first, every session
 
@@ -90,9 +98,45 @@ These are not defaults — an agent would miss them:
 ## Status snapshot
 
 | Item | Status |
-|---|---|
+|---|---|---|
 | `design/design-doc.md` | APPROVED 2026-06-02 |
 | `design/phase-a-implementation-plan.md` | APPROVED 2026-06-02 |
-| Phase A build | Not started (waiting on Assignment steps) |
-| Git repo | Not initialized |
-| Dependencies installed | None |
+| Phase A build | In progress (polishing) |
+| Git repo | Initialized (17 commits on main) |
+| Dependencies installed | Yes (12 + 16 devDeps) |
+| Tests passing | 85 across 15 test files |
+
+## Known issues for agents
+
+- **jSquash WASM in dev mode**: `vite.config.ts` excludes jsquash packages from
+  `optimizeDeps` to prevent WASM loading failures in dev. Run `npx vitest run`
+  (not through Bun) — Bun's Vitest runner has module resolution quirks.
+- **`piexifjs` is declared but unused in imports**: The exif module imports it
+  at the type level only. Do not remove from `package.json` — `strip-exif`
+  routes depend on it at runtime. The unused-import lint complaint is known.
+- **`v7_startTransition` future flag**: React Router v6 warns about this.
+  Do not add the flag — it will be the default in v7.
+- **No `ffprobe` WASM**: ffmpeg.wasm v0.12 does not ship ffprobe. The video
+  tools infer input format from the file extension. This is a known limitation.
+- **Biome, not ESLint/Prettier**: Linting uses `biome check .`; formatting
+  uses `biome format --write .`. Do not add ESLint or Prettier config.
+- **Vitest env is `jsdom`**: Tests use `happy-dom`. Do not switch to `node`
+  or `edge`.
+- **First-turn trap**: If the user opens a session with a retrospective question
+  ("What did we do so far?"), it is a question about the project's history and
+  the AGENTS.md/docs — not an instruction to continue working. Ask clarifying
+  questions before executing. Read SOUL.md first, per the "Read first" section.
+- **The `useSEO` hook** (`src/hooks/useSEO.ts`) sets `document.title` + meta
+  description per route. Already wired into ToolPage and all page components.
+  Do not add react-helmet-async — this hook is sufficient for Phase A.
+- **ToolPage defaults `onCancel` to `terminateWorker`** — 4 routes that don't
+  pass an explicit `onCancel` get cancellation for free. The remaining routes
+  (heic-to-jpg, resize-image, compress-image) pass it explicitly.
+- **`a11y/noSvgWithoutTitle` lint warnings** exist for decorative SVGs (Header
+  logo, HomePage icons). These are low-priority — the SVGs are `aria-hidden`.
+- **jsquash `terminateWorker()` now rejects pending promises** (`src/lib/engines/jsquash.ts`).
+  Previously it only cleared the pending map — now it rejects in-flight conversions
+  so `useConversion` transitions to `'cancelled'`.
+- **Pre-existing type errors** (not introduced here): `HomePage.tsx` meta undefined,
+  `compress-image.tsx` and `resize-image.tsx` missing `WARN_IMAGE_BYTES` import
+  (exists in `guardRails.ts` but not imported on those pages).
