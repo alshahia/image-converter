@@ -19,7 +19,14 @@ const VideoToGif = lazy(() => import('./routes/video-to-gif'));
 const ExtractAudio = lazy(() => import('./routes/extract-audio'));
 
 function Loading() {
-  return <div className="flex items-center justify-center p-12 text-neutral-500">Loading…</div>;
+  return (
+    <div className="flex animate-pulse-soft items-center justify-center p-12">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-300 border-t-brand-500 dark:border-neutral-700 dark:border-t-brand-400" />
+        <span className="text-sm text-neutral-500">Loading…</span>
+      </div>
+    </div>
+  );
 }
 
 const router = createBrowserRouter([

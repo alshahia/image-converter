@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
+import { useSEO } from '../hooks/useSEO';
 
 type Status = 'idle' | 'loading' | 'ready' | 'exec-running' | 'done' | 'error';
 
@@ -11,6 +14,11 @@ interface Result {
 }
 
 export function FfmpegSmokePage() {
+  useSEO(
+    'ffmpeg.wasm smoke test',
+    'Internal diagnostic: verify ffmpeg.wasm loads and executes in this browser.',
+  );
+
   const [status, setStatus] = useState<Status>('idle');
   const [result, setResult] = useState<Result>({
     loaded: false,
@@ -91,7 +99,7 @@ export function FfmpegSmokePage() {
         </p>
       </header>
 
-      <section className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+      <Card>
         <div className="mb-2 flex items-center justify-between">
           <h2 className="font-semibold">Status</h2>
           <StatusBadge status={status} />
@@ -106,36 +114,33 @@ export function FfmpegSmokePage() {
           <Field label="Log lines" value={String(result.execOutput.length)} />
         </dl>
         {result.error && (
-          <pre className="mt-3 overflow-auto rounded bg-red-50 p-3 text-xs text-red-900 dark:bg-red-950 dark:text-red-100">
+          <pre className="mt-3 overflow-auto rounded-lg bg-red-50 p-3 text-xs text-red-800 dark:bg-red-950 dark:text-red-200">
             {result.error}
           </pre>
         )}
-      </section>
+      </Card>
 
       {result.execOutput.length > 0 && (
-        <section className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+        <Card>
           <h2 className="mb-2 font-semibold">ffmpeg log (first 20 lines)</h2>
-          <pre className="overflow-auto rounded bg-neutral-50 p-3 text-xs dark:bg-neutral-950">
+          <pre className="overflow-auto rounded-lg bg-neutral-50 p-3 text-xs dark:bg-neutral-950">
             {result.execOutput.join('\n')}
           </pre>
-        </section>
+        </Card>
       )}
 
       <div className="flex gap-3">
-        <button
-          type="button"
-          onClick={run}
-          disabled={status === 'loading' || status === 'exec-running'}
-          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-neutral-50 transition hover:bg-neutral-700 disabled:opacity-50 dark:bg-neutral-50 dark:text-neutral-900 dark:hover:bg-neutral-200"
-        >
+        <Button onClick={run} disabled={status === 'loading' || status === 'exec-running'}>
           {status === 'loading' || status === 'exec-running' ? 'Running…' : 'Re-run'}
-        </button>
-        <a
-          href="/"
-          className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            window.location.href = '/';
+          }}
         >
           Back to home
-        </a>
+        </Button>
       </div>
 
       <Checklist status={status} result={result} />
@@ -201,7 +206,7 @@ function Checklist({ status, result }: { status: Status; result: Result }) {
   ];
 
   return (
-    <section className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+    <Card>
       <h2 className="mb-2 font-semibold">Pass criteria</h2>
       <ul className="space-y-2 text-sm">
         {checks.map((c) => (
@@ -216,6 +221,6 @@ function Checklist({ status, result }: { status: Status; result: Result }) {
           </li>
         ))}
       </ul>
-    </section>
+    </Card>
   );
 }

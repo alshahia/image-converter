@@ -1,5 +1,7 @@
 import { type ReactNode, useCallback, useState } from 'react';
 import { useConversion } from '../../hooks/useConversion';
+import { useSEO } from '../../hooks/useSEO';
+import { terminateWorker } from '../../lib/engines/jsquash';
 import { humanReadableAccept, isAcceptedType } from '../../lib/utils/fileValidation';
 import {
   MAX_IMAGE_BYTES,
@@ -10,6 +12,7 @@ import {
 import { DownloadButton } from '../output/DownloadButton';
 import { ErrorMessage } from '../processing/ErrorMessage';
 import { ProcessingStatus } from '../processing/ProcessingStatus';
+import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { DropZone } from '../upload/DropZone';
 import { FilePreview } from '../upload/FilePreview';
@@ -41,7 +44,11 @@ export function ToolPage({
 }: ToolPageProps) {
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
-  const { status, progress, result, error, run, cancel, reset } = useConversion(onCancel);
+  const { status, progress, result, error, run, cancel, reset } = useConversion(
+    onCancel ?? terminateWorker,
+  );
+
+  useSEO(title, description);
 
   const handleFile = useCallback(
     async (f: File | File[]) => {
@@ -96,13 +103,55 @@ export function ToolPage({
   }, [file, convert, run]);
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
-        <p className="mt-2 text-neutral-600 dark:text-neutral-400">{description}</p>
-        <p className="mt-1 text-xs text-neutral-500">
-          Accepts {humanReadableAccept(accept)} · Max {formatBytes(MAX_IMAGE_BYTES)} · EXIF stripped
-        </p>
+    <div className="mx-auto flex max-w-3xl flex-col gap-5">
+      <header className="animate-fade-in space-y-2">
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>
+        <p className="text-neutral-600 dark:text-neutral-400">{description}</p>
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-neutral-500">
+          <span className="inline-flex items-center gap-1">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="h-3 w-3"
+              role="img"
+              aria-label="Accepted formats"
+            >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+            {humanReadableAccept(accept)}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="h-3 w-3"
+              role="img"
+              aria-label="Maximum file size"
+            >
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+            </svg>
+            Max {formatBytes(MAX_IMAGE_BYTES)}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="h-3 w-3"
+              role="img"
+              aria-label="EXIF stripped"
+            >
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+            EXIF stripped
+          </span>
+        </div>
       </header>
 
       {optionsComponent}
@@ -123,13 +172,7 @@ export function ToolPage({
 
       {file && status === 'idle' && !autoConvert && (
         <div className="flex justify-center">
-          <button
-            type="button"
-            onClick={handleConvert}
-            className="rounded bg-neutral-900 px-6 py-2 text-sm font-medium text-white hover:bg-neutral-700 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
-          >
-            Convert
-          </button>
+          <Button onClick={handleConvert}>Convert</Button>
         </div>
       )}
 
@@ -138,11 +181,31 @@ export function ToolPage({
       )}
 
       {file && status === 'done' && result && (
-        <Card>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            Converted to {outputMimeType} · {formatBytes(result.size)}
-          </p>
-          <div className="mt-4">
+        <Card className="animate-scale-in space-y-4">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-400">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className="h-4 w-4"
+                role="img"
+                aria-label="Success"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </span>
+            <div>
+              <p className="font-medium text-neutral-900 dark:text-neutral-100">
+                Conversion complete
+              </p>
+              <p className="text-sm text-neutral-500">
+                {outputMimeType} &middot; {formatBytes(result.size)}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2.5">
             <DownloadButton
               blob={result}
               inputName={file.name}
@@ -150,14 +213,10 @@ export function ToolPage({
               outputMimeType={outputMimeType}
               label={`Download .${outputExtension}`}
             />
+            <Button variant="secondary" onClick={handleRemove}>
+              Convert another file
+            </Button>
           </div>
-          <button
-            type="button"
-            onClick={handleRemove}
-            className="mt-3 text-sm text-neutral-500 underline hover:text-neutral-700 dark:hover:text-neutral-300"
-          >
-            Convert another file
-          </button>
         </Card>
       )}
 

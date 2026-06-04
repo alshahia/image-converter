@@ -7,6 +7,7 @@ import { Card } from '../components/ui/card';
 import { DropZone } from '../components/upload/DropZone';
 import { FilePreview } from '../components/upload/FilePreview';
 import { useConversion } from '../hooks/useConversion';
+import { useSEO } from '../hooks/useSEO';
 import { videoToMp4 } from '../lib/conversions/video/video-to-mp4';
 import { terminateFFmpeg } from '../lib/engines/ffmpeg';
 import { humanReadableAccept, isAcceptedType } from '../lib/utils/fileValidation';
@@ -36,6 +37,11 @@ export default function VideoToMp4Page() {
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const { status, progress, result, error, run, cancel, reset } = useConversion(terminateFFmpeg);
+
+  useSEO(
+    'Video to MP4',
+    'Convert any video to MP4 (H.264 + AAC) in your browser. No upload, no signup.',
+  );
 
   const handleFile = useCallback(
     (f: File | File[]) => {

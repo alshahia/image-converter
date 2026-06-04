@@ -9,6 +9,7 @@ import { Slider } from '../components/ui/slider';
 import { DropZone } from '../components/upload/DropZone';
 import { FilePreview } from '../components/upload/FilePreview';
 import { useConversion } from '../hooks/useConversion';
+import { useSEO } from '../hooks/useSEO';
 import { videoToGif } from '../lib/conversions/video/video-to-gif';
 import { terminateFFmpeg } from '../lib/engines/ffmpeg';
 import { humanReadableAccept, isAcceptedType } from '../lib/utils/fileValidation';
@@ -39,6 +40,11 @@ export default function VideoToGifPage() {
   const [fileError, setFileError] = useState<string | null>(null);
   const [width, setWidth] = useState(480);
   const { status, progress, result, error, run, cancel, reset } = useConversion(terminateFFmpeg);
+
+  useSEO(
+    'Video to GIF',
+    'Convert a short video to a high-quality animated GIF in your browser. No upload, no signup.',
+  );
 
   const handleFile = useCallback(
     (f: File | File[]) => {

@@ -9,6 +9,7 @@ import { Slider } from '../components/ui/slider';
 import { DropZone } from '../components/upload/DropZone';
 import { FilePreview } from '../components/upload/FilePreview';
 import { useConversion } from '../hooks/useConversion';
+import { useSEO } from '../hooks/useSEO';
 import { resizeImage } from '../lib/conversions/image/resize';
 import {
   computeResizeToFit,
@@ -17,12 +18,8 @@ import {
   terminateWorker,
 } from '../lib/engines/jsquash';
 import { humanReadableAccept, isAcceptedType } from '../lib/utils/fileValidation';
-import {
-  MAX_IMAGE_BYTES,
-  WARN_IMAGE_BYTES,
-  checkFileSize,
-  formatBytes,
-} from '../lib/utils/guardRails';
+import { checkFileSize, formatBytes } from '../lib/utils/guardRails';
+import { MAX_IMAGE_BYTES, WARN_IMAGE_BYTES } from '../lib/utils/guardRails';
 
 const ACCEPT = ['.jpg', '.jpeg', '.png', '.webp', 'image/jpeg', 'image/png', 'image/webp'];
 const MIN_EDGE = 16;
@@ -35,6 +32,11 @@ export default function ResizeImagePage() {
   const [dimsError, setDimsError] = useState<string | null>(null);
   const [longestEdge, setLongestEdge] = useState(1920);
   const { status, progress, result, error, run, cancel, reset } = useConversion(terminateWorker);
+
+  useSEO(
+    'Resize Image',
+    'Resize images to exact dimensions. Aspect ratio is preserved. No upload, no signup.',
+  );
 
   useEffect(() => {
     if (!file) {
@@ -117,15 +119,56 @@ export default function ResizeImagePage() {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight">Resize image</h1>
-        <p className="mt-2 text-neutral-600 dark:text-neutral-400">
+      <header className="animate-fade-in space-y-3">
+        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Resize image</h1>
+        <p className="text-neutral-600 dark:text-neutral-400">
           Resize an image to a target longest edge. Aspect ratio is preserved. No upload, no signup.
         </p>
-        <p className="mt-1 text-xs text-neutral-500">
-          Accepts {humanReadableAccept(ACCEPT)} · Max {formatBytes(MAX_IMAGE_BYTES)} · EXIF stripped
-          for JPEG output
-        </p>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-500">
+          <span className="inline-flex items-center gap-1">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="h-3 w-3"
+              role="img"
+              aria-label="Accepted formats"
+            >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+            {humanReadableAccept(ACCEPT)}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="h-3 w-3"
+              role="img"
+              aria-label="Maximum file size"
+            >
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+            </svg>
+            Max {formatBytes(MAX_IMAGE_BYTES)}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="h-3 w-3"
+              role="img"
+              aria-label="EXIF stripped"
+            >
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+            EXIF stripped for JPEG output
+          </span>
+        </div>
       </header>
 
       {fileError && (
@@ -181,11 +224,29 @@ export default function ResizeImagePage() {
       )}
 
       {file && status === 'done' && result && (
-        <Card>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            Resized to {outputMimeType} · {formatBytes(result.size)}
-          </p>
-          <div className="mt-4">
+        <Card className="animate-scale-in space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-400">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className="h-4 w-4"
+                role="img"
+                aria-label="Success"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </span>
+            <div>
+              <p className="font-medium text-neutral-900 dark:text-neutral-100">Resize complete</p>
+              <p className="text-sm text-neutral-500">
+                {outputMimeType} · {formatBytes(result.size)}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3">
             <DownloadButton
               blob={result}
               inputName={file.name}
@@ -193,14 +254,10 @@ export default function ResizeImagePage() {
               outputMimeType={outputMimeType}
               label={`Download .${outputExtension}`}
             />
+            <Button variant="secondary" onClick={handleRemove}>
+              Resize another file
+            </Button>
           </div>
-          <button
-            type="button"
-            onClick={handleRemove}
-            className="mt-3 text-sm text-neutral-500 underline hover:text-neutral-700 dark:hover:text-neutral-300"
-          >
-            Resize another file
-          </button>
         </Card>
       )}
 

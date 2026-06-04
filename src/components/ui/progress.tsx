@@ -23,7 +23,7 @@ export function Progress({ value, max = 100, label }: ProgressProps) {
         tabIndex={0}
       >
         <div
-          className="h-full bg-neutral-900 transition-all duration-200 dark:bg-neutral-50"
+          className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-600 transition-all duration-300 ease-out"
           style={{ width: `${pct}%` }}
         />
       </div>

@@ -1,4 +1,11 @@
+import { useSEO } from '../hooks/useSEO';
+
 export function PrivacyPage() {
+  useSEO(
+    'Privacy',
+    'Image Converter runs entirely in your browser. Files are processed locally. No upload, no data collection.',
+  );
+
   return (
     <article className="mx-auto max-w-3xl space-y-6 text-neutral-700 dark:text-neutral-300">
       <header>

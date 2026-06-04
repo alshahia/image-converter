@@ -7,6 +7,7 @@ import { Card } from '../components/ui/card';
 import { DropZone } from '../components/upload/DropZone';
 import { FilePreview } from '../components/upload/FilePreview';
 import { useConversion } from '../hooks/useConversion';
+import { useSEO } from '../hooks/useSEO';
 import { type AudioFormat, extractAudio } from '../lib/conversions/video/extract-audio';
 import { terminateFFmpeg } from '../lib/engines/ffmpeg';
 import { humanReadableAccept, isAcceptedType } from '../lib/utils/fileValidation';
@@ -43,6 +44,11 @@ export default function ExtractAudioPage() {
   const [fileError, setFileError] = useState<string | null>(null);
   const [format, setFormat] = useState<AudioFormat>('mp3');
   const { status, progress, result, error, run, cancel, reset } = useConversion(terminateFFmpeg);
+
+  useSEO(
+    'Extract Audio',
+    'Extract the audio track from a video as MP3, WAV, or AAC. No upload, no signup.',
+  );
 
   const handleFile = useCallback(
     (f: File | File[]) => {

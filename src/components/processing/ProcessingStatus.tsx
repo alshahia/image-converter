@@ -13,10 +13,10 @@ export function ProcessingStatus({
   onCancel,
 }: ProcessingStatusProps) {
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-900">
+    <div className="animate-fade-in rounded-xl border border-neutral-200/80 bg-white p-6 shadow-soft dark:border-neutral-800 dark:bg-neutral-900 dark:shadow-dark-soft">
       <Progress value={progress} label={label} />
       {onCancel && (
-        <div>
+        <div className="mt-3">
           <Button onClick={onCancel} variant="ghost" size="sm">
             Cancel
           </Button>

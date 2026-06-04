@@ -47,7 +47,7 @@ export function Slider({
         value={value}
         onChange={handleChange}
         disabled={disabled}
-        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 accent-neutral-900 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:accent-neutral-50"
+        className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 accent-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:accent-brand-400"
       />
     </div>
   );
