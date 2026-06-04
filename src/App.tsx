@@ -7,10 +7,31 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 
 const HeicToJpg = lazy(() => import('./routes/heic-to-jpg'));
+const HeicToWebp = lazy(() => import('./routes/heic-to-webp'));
+const HeicToPng = lazy(() => import('./routes/heic-to-png'));
 const PngToJpg = lazy(() => import('./routes/png-to-jpg'));
 const JpgToPng = lazy(() => import('./routes/jpg-to-png'));
 const WebpToJpg = lazy(() => import('./routes/webp-to-jpg'));
 const JpgToWebp = lazy(() => import('./routes/jpg-to-webp'));
+const JpgToAvif = lazy(() => import('./routes/jpg-to-avif'));
+const AvifToJpg = lazy(() => import('./routes/avif-to-jpg'));
+const PngToAvif = lazy(() => import('./routes/png-to-avif'));
+const AvifToPng = lazy(() => import('./routes/avif-to-png'));
+const JpgToJxl = lazy(() => import('./routes/jpg-to-jxl'));
+const JxlToJpg = lazy(() => import('./routes/jxl-to-jpg'));
+const PngToJxl = lazy(() => import('./routes/png-to-jxl'));
+const JxlToPng = lazy(() => import('./routes/jxl-to-png'));
+const JpgToBmp = lazy(() => import('./routes/jpg-to-bmp'));
+const PngToBmp = lazy(() => import('./routes/png-to-bmp'));
+const BmpToJpg = lazy(() => import('./routes/bmp-to-jpg'));
+const BmpToPng = lazy(() => import('./routes/bmp-to-png'));
+const JpgToTiff = lazy(() => import('./routes/jpg-to-tiff'));
+const PngToTiff = lazy(() => import('./routes/png-to-tiff'));
+const TiffToJpg = lazy(() => import('./routes/tiff-to-jpg'));
+const TiffToPng = lazy(() => import('./routes/tiff-to-png'));
+const JpgToIco = lazy(() => import('./routes/jpg-to-ico'));
+const PngToIco = lazy(() => import('./routes/png-to-ico'));
+const SvgToPng = lazy(() => import('./routes/svg-to-png'));
 const ResizeImage = lazy(() => import('./routes/resize-image'));
 const CompressImage = lazy(() => import('./routes/compress-image'));
 const StripExif = lazy(() => import('./routes/strip-exif'));
@@ -40,6 +61,174 @@ const router = createBrowserRouter([
         element: (
           <Suspense fallback={<Loading />}>
             <HeicToJpg />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'heic-to-webp',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <HeicToWebp />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'heic-to-png',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <HeicToPng />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'jpg-to-avif',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <JpgToAvif />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'avif-to-jpg',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <AvifToJpg />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'png-to-avif',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <PngToAvif />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'avif-to-png',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <AvifToPng />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'jpg-to-jxl',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <JpgToJxl />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'jxl-to-jpg',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <JxlToJpg />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'png-to-jxl',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <PngToJxl />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'jxl-to-png',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <JxlToPng />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'jpg-to-bmp',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <JpgToBmp />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'png-to-bmp',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <PngToBmp />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'bmp-to-jpg',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <BmpToJpg />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'bmp-to-png',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <BmpToPng />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'jpg-to-tiff',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <JpgToTiff />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'png-to-tiff',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <PngToTiff />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'tiff-to-jpg',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <TiffToJpg />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'tiff-to-png',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <TiffToPng />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'jpg-to-ico',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <JpgToIco />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'png-to-ico',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <PngToIco />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'svg-to-png',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <SvgToPng />
           </Suspense>
         ),
       },

@@ -2,7 +2,8 @@
 
 ## Project state
 
-**Phase A in progress** (polishing). Full codebase exists.
+**Phase A done. Phase B+ (feature parity push) in progress.** Full
+codebase exists; building toward 51 tool routes + batch + PWA + AI.
 
 - **Stack**: React + TypeScript + Vite + Vitest. Bun is package manager only.
 - **17 commits** on `main`. Git repo initialized at GitHub.
@@ -17,6 +18,10 @@
   `extract-audio`.
 - **Vite dev/build** working. COOP/COEP headers in `public/_headers`.
 - ffmpeg-core files self-hosted in `public/ffmpeg/`.
+- **Phase B+ plan:** `design/phase-b-implementation-plan.md` (binding,
+  APPROVED 2026-06-04). Extends Phase B scope per
+  `design-doc.md:378-401` with 8 waves, ~51 total routes, AI features,
+  PWA, batch. Validation gate skipped per user decision.
 
 The folder path (`E:\flutter\image_convertor`) is a leftover from an
 earlier Flutter idea — ignore it. The product is a browser tool.
@@ -33,9 +38,11 @@ In this order:
    validation gates). Source of truth for *what* to build. APPROVED
    2026-06-02.
 3. **`design/phase-a-implementation-plan.md`** — engineering plan for
-   Phase A (file structure, library versions, integration code,
-   3-week day-by-day order). APPROVED 2026-06-02 (companion to
-   `design-doc.md`).
+   Phase A. APPROVED 2026-06-02.
+4. **`design/phase-b-implementation-plan.md`** — engineering plan for
+   Phase B+ (feature parity push: 51 routes, AI, PWA, batch).
+   APPROVED 2026-06-04. **This is the active plan.** All current
+   work follows its 8 waves.
 
 The 5 files in `research/` explain *why* the stack was chosen. Most
 agents will only need `research/tech-stack-analysis.md` (why Bun is the
@@ -44,23 +51,23 @@ package manager only, not the runtime) and `research/target-ezgif.md`
 
 ## What the user has committed to (binding)
 
-- **Phased delivery**: A → validate → B → validate → C. Do not skip
-  phases. Do not start Phase C work until Phase A's validation gate
-  passes. Phase C work is server-side FFmpeg, job queues, R2 storage,
-  Stripe — none of this belongs in Phase A.
-- **Phase A constraints**: pure client-side, no server code, no auth,
-  no Stripe, no service worker, no PWA. The 5 Assignment steps in
-  `design-doc.md` must happen before any code is written: pick a
-  domain, set up the GitHub repo, run the ffmpeg.wasm Windows smoke
-  test, set a launch date, skip C.
+- **Phased delivery**: A → validate → B → validate → C. **Exception
+  (2026-06-04):** the A→B validation gate is **skipped** per user
+  decision. Phase B+ work proceeds in parallel. Do not start Phase C
+  work (server-side FFmpeg, job queues, R2 storage, Stripe) without
+  its own gate.
+- **Phase A constraints** (still binding): pure client-side, no
+  server code, no auth, no Stripe. PWA, service worker, and AI
+  features are explicitly added in Phase B+ and are NOT Phase A.
 - **Bun is the package manager only.** Per `tech-stack-analysis.md`,
   Bun as a runtime adds nothing to a static client-side app. Use
   `bun install` for installs; Vite for dev/build. Do not write a
   Bun server.
-- **Validation gates are non-negotiable.** Each phase has a measurable
-  gate. If the gate fails, stop — do not push forward. See
-  `design-doc.md` §"Validation gate (A → B)" for the specific
-  metrics.
+- **Out of scope (permanent)**: PDF tools, OCR, cloud sync, accounts,
+  face restore, style transfer on portraits, DeepOldify, real NLE
+  video editing, public API/paid tier (Phase C), i18n, dark mode.
+  See `design/phase-b-implementation-plan.md` §"Out of scope" for
+  the full list and reasoning.
 
 ## Conventions specific to this repo
 
@@ -98,12 +105,14 @@ These are not defaults — an agent would miss them:
 ## Status snapshot
 
 | Item | Status |
-|---|---|---|
+|---|---|
 | `design/design-doc.md` | APPROVED 2026-06-02 |
 | `design/phase-a-implementation-plan.md` | APPROVED 2026-06-02 |
-| Phase A build | In progress (polishing) |
+| `design/phase-b-implementation-plan.md` | APPROVED 2026-06-04 |
+| Phase A build | Done (11 tools, 85 tests) |
+| Phase B+ build | Wave 0 in progress |
 | Git repo | Initialized (17 commits on main) |
-| Dependencies installed | Yes (12 + 16 devDeps) |
+| Dependencies installed | Yes (12 + 16 devDeps; +Wave 0 deps pending) |
 | Tests passing | 85 across 15 test files |
 
 ## Known issues for agents
@@ -140,3 +149,23 @@ These are not defaults — an agent would miss them:
 - **Pre-existing type errors** (not introduced here): `HomePage.tsx` meta undefined,
   `compress-image.tsx` and `resize-image.tsx` missing `WARN_IMAGE_BYTES` import
   (exists in `guardRails.ts` but not imported on those pages).
+- **History feature is FROZEN** (per user decision 2026-06-04). No
+  `/history` route, no history state extension, no Footer link. Do
+  not build until the user unfreezes.
+- **iOS video tools limitation is documented, not fixed.** Video
+  routes get a non-blocking informational banner on iOS Safari. No
+  server-side fallback. Revisit if browser updates fix
+  SharedArrayBuffer.
+- **Mobile-first is scattered, not retrofitted.** Every new component
+  is built mobile-first in its own wave (44px touch targets, no-hover
+  fallbacks). There is no Wave 7 retro-pass.
+- **AI model files must be in `public/models/`** before Wave 8. The
+  plan calls for `briaai-rmbg-1.4.onnx` (~5MB), `realesrgan-x2plus.onnx`
+  (~10MB), `realesrgan-x4plus.onnx` (~40MB). License must be Apache 2.0
+  or MIT. If a different license is required, raise it before commit.
+- **`@imgly/background-removal` is the chosen bg-removal engine.**
+  Do not swap without user approval. It uses RMBG-1.4 under the hood
+  and the same model file lives at `public/models/`.
+- **`vite-plugin-pwa` is the chosen PWA plugin.** Config-only install
+  in Wave 0; full `VitePWA({...})` config lands in Wave 7. Do not
+  add `workbox-cli` or hand-rolled service workers.

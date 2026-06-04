@@ -13,3 +13,18 @@ if (typeof Blob !== 'undefined' && !Blob.prototype.arrayBuffer) {
     });
   };
 }
+
+if (typeof globalThis.ImageData === 'undefined') {
+  class TestImageData {
+    public readonly data: Uint8ClampedArray;
+    public readonly width: number;
+    public readonly height: number;
+    constructor(data: Uint8ClampedArray, width: number, height?: number) {
+      this.data = data;
+      this.width = width;
+      this.height = height ?? data.length / (width * 4);
+    }
+  }
+  (globalThis as { ImageData: typeof TestImageData }).ImageData =
+    TestImageData as unknown as typeof globalThis.ImageData;
+}

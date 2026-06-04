@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { DemoZone } from '../components/landing/DemoZone';
 import { ToolIcon } from '../components/landing/ToolIcon';
-import { TOOLS, type TileColor, categoryMeta } from '../data/tools';
+import { CATEGORY_ORDER, TOOLS, type TileColor, categoryMeta } from '../data/tools';
 import { useSEO } from '../hooks/useSEO';
 
 const TILE_BG: Record<TileColor, string> = {
@@ -25,7 +25,7 @@ const TILE_ICON: Record<TileColor, string> = {
 const TRUST_PILLS = [
   { label: '100% private', icon: 'shield' as const },
   { label: 'WebAssembly', icon: 'wand' as const },
-  { label: '11 tools', icon: 'layers' as const },
+  { label: `${TOOLS.length} tools`, icon: 'layers' as const },
   { label: 'EXIF stripped', icon: 'tag' as const },
 ];
 
@@ -140,7 +140,7 @@ export function HomePage() {
                 aria-hidden="true"
                 className="inline-flex h-1.5 w-1.5 rounded-full bg-accent animate-pulse-soft"
               />
-              11 tools, zero uploads, no account
+              {TOOLS.length} tools, zero uploads, no account
             </span>
             <h1 className="font-sans text-4xl font-bold leading-[1.05] tracking-tightest text-ink sm:text-5xl lg:text-6xl">
               Media tools,
@@ -171,7 +171,7 @@ export function HomePage() {
                 </svg>
               </Link>
               <a href="#tools" className="btn-glass px-6 py-3 text-base">
-                See all 11 tools
+                See all {TOOLS.length} tools
               </a>
             </div>
             <ul className="flex flex-wrap gap-2 pt-2" aria-label="Trust signals">
@@ -194,7 +194,7 @@ export function HomePage() {
 
       {/* TOOL GRID */}
       <section id="tools" className="space-y-12 scroll-mt-28">
-        {(['convert', 'optimize', 'video', 'internal'] as const).map((category) => {
+        {CATEGORY_ORDER.map((category) => {
           const tools = TOOLS.filter((t) => t.category === category);
           if (tools.length === 0) return null;
           const meta = categoryMeta[category];

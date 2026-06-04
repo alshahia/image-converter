@@ -40,7 +40,9 @@ export default defineConfig({
     exclude: [
       '@ffmpeg/ffmpeg',
       '@ffmpeg/util',
+      '@jsquash/avif',
       '@jsquash/jpeg',
+      '@jsquash/jxl',
       '@jsquash/png',
       '@jsquash/webp',
       '@jsquash/resize',
@@ -50,3 +52,6 @@ export default defineConfig({
     format: 'es',
   },
 });
+// Wave 0: vite-plugin-pwa is in package.json (config-only install).
+// Import + full VitePWA({...}) config lands in Wave 7 — not before,
+// because the dev server will fail to start until `bun install` runs.

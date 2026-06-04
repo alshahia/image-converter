@@ -74,6 +74,8 @@ const MIME_TYPES: Record<ImageFormat, string> = {
   jpeg: 'image/jpeg',
   png: 'image/png',
   webp: 'image/webp',
+  avif: 'image/avif',
+  jxl: 'image/jxl',
 };
 
 export function mimeTypeFor(format: ImageFormat): string {
@@ -95,6 +97,8 @@ export function detectFormat(blob: Blob): ImageFormat | null {
   if (mime === 'image/jpeg') return 'jpeg';
   if (mime === 'image/png') return 'png';
   if (mime === 'image/webp') return 'webp';
+  if (mime === 'image/avif') return 'avif';
+  if (mime === 'image/jxl') return 'jxl';
   return null;
 }
 
