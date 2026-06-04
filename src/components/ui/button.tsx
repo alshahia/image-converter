@@ -10,13 +10,13 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
-    'bg-neutral-900 text-neutral-50 hover:bg-neutral-700 disabled:opacity-50 dark:bg-neutral-50 dark:text-neutral-900 dark:hover:bg-neutral-200',
+    'rounded-pill bg-drift-cta text-white shadow-drift-cta hover:scale-[1.02] hover:shadow-drift-cta active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100',
   secondary:
-    'border border-neutral-300 bg-white text-neutral-900 hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50 dark:hover:bg-neutral-800',
+    'rounded-pill border border-white/70 bg-glass-soft text-ink shadow-glass-inset backdrop-blur-glass-sm hover:bg-glass-strong active:scale-[0.98] disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.05] dark:text-ink-inverse dark:hover:bg-white/[0.08]',
   ghost:
-    'text-neutral-700 hover:bg-neutral-100 disabled:opacity-50 dark:text-neutral-300 dark:hover:bg-neutral-800',
+    'rounded-lg text-ink-muted hover:text-ink hover:bg-white/50 active:bg-white/70 disabled:opacity-50 dark:text-neutral-400 dark:hover:text-ink-inverse dark:hover:bg-white/[0.06] dark:active:bg-white/[0.1]',
   destructive:
-    'bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 dark:bg-red-700 dark:hover:bg-red-600',
+    'rounded-lg border border-red-500/40 bg-red-500/15 text-red-600 shadow-soft hover:bg-red-500/25 active:scale-[0.98] disabled:opacity-50 dark:border-red-400/30 dark:bg-red-500/20 dark:text-red-300 dark:hover:bg-red-500/30',
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
@@ -33,7 +33,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     <button
       ref={ref}
       type={type}
-      className={`inline-flex items-center justify-center rounded-md font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2 disabled:cursor-not-allowed dark:focus-visible:ring-neutral-50 ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className}`}
+      className={`inline-flex items-center justify-center font-semibold transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:cursor-not-allowed ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className}`}
       {...rest}
     />
   );
