@@ -10,7 +10,10 @@ export type { ImageFormat, ResizeSpec } from '../workers/image.worker';
 
 let workerInstance: Worker | null = null;
 let nextId = 1;
-const pending = new Map<number, (response: ConvertResponse) => void>();
+const pending = new Map<
+  number,
+  { resolve: (response: ConvertResponse) => void; reject: (reason: unknown) => void }
+>();
 
 function getWorker(): Worker {
   if (workerInstance) return workerInstance;
@@ -20,10 +23,10 @@ function getWorker(): Worker {
   });
   workerInstance.addEventListener('message', (event: MessageEvent<ConvertResponse>) => {
     const { id } = event.data;
-    const resolver = pending.get(id);
-    if (!resolver) return;
+    const entry = pending.get(id);
+    if (!entry) return;
     pending.delete(id);
-    resolver(event.data);
+    entry.resolve(event.data);
   });
   return workerInstance;
 }
@@ -31,8 +34,8 @@ function getWorker(): Worker {
 function runOnWorker(request: Omit<ConvertRequest, 'id'>): Promise<ConvertResponse> {
   const id = nextId++;
   const full: ConvertRequest = { ...request, id };
-  return new Promise((resolve) => {
-    pending.set(id, resolve);
+  return new Promise((resolve, reject) => {
+    pending.set(id, { resolve, reject });
     getWorker().postMessage(full, [full.buffer]);
   });
 }
@@ -136,6 +139,9 @@ export function terminateWorker(): void {
   if (workerInstance) {
     workerInstance.terminate();
     workerInstance = null;
+  }
+  for (const [, entry] of pending) {
+    entry.reject(new Error('Conversion cancelled'));
   }
   pending.clear();
 }
