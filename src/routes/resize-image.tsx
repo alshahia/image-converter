@@ -8,7 +8,7 @@ import { Card } from '../components/ui/card';
 import { Slider } from '../components/ui/slider';
 import { DropZone } from '../components/upload/DropZone';
 import { FilePreview } from '../components/upload/FilePreview';
-import { useConversion } from '../hooks/useConversion';
+import { useFileConversion } from '../hooks/useFileConversion';
 import { useSEO } from '../hooks/useSEO';
 import { resizeImage } from '../lib/conversions/image/resize';
 import {
@@ -17,21 +17,34 @@ import {
   getImageDimensions,
   terminateWorker,
 } from '../lib/engines/jsquash';
-import { humanReadableAccept, isAcceptedType } from '../lib/utils/fileValidation';
-import { checkFileSize, formatBytes } from '../lib/utils/guardRails';
-import { MAX_IMAGE_BYTES, WARN_IMAGE_BYTES } from '../lib/utils/guardRails';
+import { humanReadableAccept } from '../lib/utils/fileValidation';
+import { formatBytes, MAX_IMAGE_BYTES, WARN_IMAGE_BYTES } from '../lib/utils/guardRails';
 
 const ACCEPT = ['.jpg', '.jpeg', '.png', '.webp', 'image/jpeg', 'image/png', 'image/webp'];
 const MIN_EDGE = 16;
 const MAX_EDGE = 8000;
 
 export default function ResizeImagePage() {
-  const [file, setFile] = useState<File | null>(null);
-  const [fileError, setFileError] = useState<string | null>(null);
+  const {
+    file,
+    fileError,
+    handleFile,
+    handleRemove,
+    status,
+    progress,
+    result,
+    error,
+    run,
+    cancel,
+  } = useFileConversion({
+    accept: ACCEPT,
+    maxBytes: MAX_IMAGE_BYTES,
+    warnBytes: WARN_IMAGE_BYTES,
+    onCancel: terminateWorker,
+  });
   const [originalDims, setOriginalDims] = useState<{ width: number; height: number } | null>(null);
   const [dimsError, setDimsError] = useState<string | null>(null);
   const [longestEdge, setLongestEdge] = useState(1920);
-  const { status, progress, result, error, run, cancel, reset } = useConversion(terminateWorker);
 
   useSEO(
     'Resize Image',
@@ -64,39 +77,6 @@ export default function ResizeImagePage() {
 
   const targetDims = originalDims ? computeResizeToFit(originalDims, longestEdge) : null;
   const format = file ? detectFormat(file) : null;
-
-  const handleFile = useCallback(
-    (f: File | File[]) => {
-      const first = Array.isArray(f) ? f[0] : f;
-      if (!first) {
-        setFileError('No file selected.');
-        return;
-      }
-      setFileError(null);
-      if (!isAcceptedType(first, ACCEPT)) {
-        setFileError(
-          `Expected ${humanReadableAccept(ACCEPT)}. Got ${first.type || 'unknown type'}.`,
-        );
-        return;
-      }
-      const sizeCheck = checkFileSize(first, MAX_IMAGE_BYTES, WARN_IMAGE_BYTES, 'file');
-      if (sizeCheck.verdict === 'block') {
-        setFileError(sizeCheck.reason);
-        return;
-      }
-      setFile(first);
-      reset();
-    },
-    [reset],
-  );
-
-  const handleRemove = useCallback(() => {
-    cancel();
-    setFile(null);
-    setFileError(null);
-    setDimsError(null);
-    reset();
-  }, [cancel, reset]);
 
   const handleConvert = useCallback(async () => {
     if (!file || !targetDims || !format) return;

@@ -19,7 +19,7 @@ vi.mock('../../src/lib/engines/ffmpeg', async () => {
   return {
     ...actual,
     getFFmpeg: vi.fn(async () => ffmpegInstance),
-    attachProgress: vi.fn(() => () => {}),
+    onProgressFFmpeg: vi.fn(() => () => {}),
   };
 });
 
@@ -112,10 +112,11 @@ describe('extractAudio', () => {
     expect(deleteFile).toHaveBeenCalledWith('input.mp4');
   });
 
-  it('forwards onProgress values through the attachProgress wrapper', async () => {
+  it('forwards onProgress values through the onProgressFFmpeg wrapper', async () => {
     const onProgress = vi.fn();
-    const { attachProgress } = await import('../../src/lib/engines/ffmpeg');
-    vi.mocked(attachProgress).mockImplementationOnce((_f, cb) => {
+    const { onProgressFFmpeg } = await import('../../src/lib/engines/ffmpeg');
+    vi.mocked(onProgressFFmpeg).mockClear();
+    vi.mocked(onProgressFFmpeg).mockImplementationOnce((cb) => {
       cb(50);
       return () => {};
     });

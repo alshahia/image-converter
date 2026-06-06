@@ -1,5 +1,5 @@
 import { fetchFile } from '@ffmpeg/util';
-import { attachProgress, getFFmpeg } from '../../engines/ffmpeg';
+import { getFFmpeg, onProgressFFmpeg } from '../../engines/ffmpeg';
 import { inferVideoExtension } from '../../utils/video';
 
 export type Mp4Preset = 'ultrafast' | 'fast' | 'medium';
@@ -15,7 +15,7 @@ export async function videoToMp4(
 ): Promise<Blob> {
   const { preset = 'fast', onProgress } = options;
   const ffmpeg = await getFFmpeg();
-  const detach = onProgress ? attachProgress(ffmpeg, onProgress) : null;
+  const detach = onProgress ? onProgressFFmpeg(onProgress) : null;
 
   const inputName = `input.${inferVideoExtension(file, 'mp4')}`;
   const outputName = 'output.mp4';

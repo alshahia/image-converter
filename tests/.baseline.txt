@@ -1,0 +1,8 @@
+[31mΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[39m
+
+[2m Test Files [22m [1m[32m26 passed[39m[22m[90m (27)[39m
+[2m      Tests [22m [1m[32m185 passed[39m[22m[90m (187)[39m
+[2m     Errors [22m [1m[31m1 error[39m[22m
+[2m   Start at [22m 09:19:25
+[2m   Duration [22m 67.11s[2m (transform 3.98s, setup 8.07s, collect 7.87s, tests 1.83s, environment 48.77s, prepare 8.52s)[22m
+

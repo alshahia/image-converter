@@ -28,7 +28,24 @@ function getWorker(): Worker {
     pending.delete(id);
     entry.resolve(event.data);
   });
+  workerInstance.addEventListener('error', (event: ErrorEvent) => {
+    rejectAllPending(new Error(`jsquash worker error: ${event.message || 'unknown'}`));
+    workerInstance?.terminate();
+    workerInstance = null;
+  });
+  workerInstance.addEventListener('messageerror', () => {
+    rejectAllPending(new Error('jsquash worker messageerror: failed to deserialize'));
+    workerInstance?.terminate();
+    workerInstance = null;
+  });
   return workerInstance;
+}
+
+function rejectAllPending(reason: Error): void {
+  for (const [, entry] of pending) {
+    entry.reject(reason);
+  }
+  pending.clear();
 }
 
 function runOnWorker(request: Omit<ConvertRequest, 'id'>): Promise<ConvertResponse> {

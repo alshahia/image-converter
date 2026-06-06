@@ -1,5 +1,5 @@
 import { fetchFile } from '@ffmpeg/util';
-import { attachProgress, getFFmpeg } from '../../engines/ffmpeg';
+import { getFFmpeg, onProgressFFmpeg } from '../../engines/ffmpeg';
 import { inferVideoExtension } from '../../utils/video';
 
 export type AudioFormat = 'mp3' | 'wav' | 'aac' | 'm4a';
@@ -30,7 +30,7 @@ export async function extractAudio(
 ): Promise<Blob> {
   const { format = 'mp3', bitrate = '192k', onProgress } = options;
   const ffmpeg = await getFFmpeg();
-  const detach = onProgress ? attachProgress(ffmpeg, onProgress) : null;
+  const detach = onProgress ? onProgressFFmpeg(onProgress) : null;
 
   const inputName = `input.${inferVideoExtension(file, 'mp4')}`;
   const outputName = `output.${format}`;

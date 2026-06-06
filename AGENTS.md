@@ -6,16 +6,19 @@
 codebase exists; building toward 51 tool routes + batch + PWA + AI.
 
 - **Stack**: React + TypeScript + Vite + Vitest. Bun is package manager only.
-- **17 commits** on `main`. Git repo initialized at GitHub.
-- **85 tests passing** across 15 test files (unit + integration).
-- **12 dependencies** (`@ffmpeg/ffmpeg`, `@ffmpeg/util`, `jsquash`,
-  `idb-keyval`, `react-router-dom`, `piexifjs` — keep, see known issues,
-  `react`, `react-dom`) + **16 devDependencies** (Vite, Vitest,
-  TypeScript, Biome, Tailwind, PostCSS).
-- **11 tool routes** under `/` (kebab-case): `jpg-to-png`, `png-to-jpg`,
-  `jpg-to-webp`, `webp-to-jpg`, `heic-to-jpg`, `resize-image`,
-  `compress-image`, `strip-exif`, `video-to-mp4`, `video-to-gif`,
-  `extract-audio`.
+- **41 commits** on `main`. Git repo initialized at GitHub.
+- **183 tests passing** across 26 test files (unit + integration).
+- **20 prod dependencies** (`@ffmpeg/*`, `jsquash` (6 sub-packages),
+  `canvg`, `heic2any`, `idb-keyval`, `jsbarcode`, `jszip`, `onnxruntime-web`,
+  `piexifjs` — keep, see known issues, `qrcode`, `react`, `react-dom`,
+  `react-router-dom`, `utif`, `workbox-window`, `zustand`) + **17 devDependencies**
+  (Vite, Vitest, TypeScript, Biome, Tailwind, PostCSS, `happy-dom`, `jsdom`,
+  `vite-plugin-pwa`).
+- **46 tool routes** under `/` (kebab-case). Phase A (11) + Wave 1
+  AVIF/JXL/HEIC-expand/BMP/TIFF/ICO/SVG (20) + Wave 2
+  crop/rotate/watermark/view-exif (4) + Wave 3 video
+  trim/crop/rotate/mute/speed/resize/extract-frames/to-webm (8) + Wave 8
+  AI bg-removal/upscale/smart-compress (3) are live.
 - **Vite dev/build** working. COOP/COEP headers in `public/_headers`.
 - ffmpeg-core files self-hosted in `public/ffmpeg/`.
 - **Phase B+ plan:** `design/phase-b-implementation-plan.md` (binding,
@@ -30,6 +33,13 @@ earlier Flutter idea — ignore it. The product is a browser tool.
 
 In this order:
 
+0. **`skills_guide&roadmap.md`** (project root) — meta-skill selection
+   guide. Tells the agent which skills to load per task type
+   (writing-plans, systematic-debugging, test-driven-development,
+   verification-before-completion, frontend-design, etc.) and which
+   phase of the project roadmap it is on. Read immediately after this
+   file, before any other doc, so the rest of the session uses
+   the right workflow.
 1. **`SOUL.md`** — behavioral code for the agent (values, identity,
    security posture, no-flattery rule, push-back on weak choices).
    Read before doing anything. Arabic version exists as `SOUL_ar.md`
@@ -110,10 +120,11 @@ These are not defaults — an agent would miss them:
 | `design/phase-a-implementation-plan.md` | APPROVED 2026-06-02 |
 | `design/phase-b-implementation-plan.md` | APPROVED 2026-06-04 |
 | Phase A build | Done (11 tools, 85 tests) |
-| Phase B+ build | Wave 0 in progress |
-| Git repo | Initialized (17 commits on main) |
-| Dependencies installed | Yes (12 + 16 devDeps; +Wave 0 deps pending) |
-| Tests passing | 85 across 15 test files |
+| Phase B+ build | Wave 8 done (46 tools, 183 tests) |
+| V&V fix plan | 18 of 19 findings fixed (L-5 deferred to Phase C); 252 tests, 24+ commits on `v2/vandv-fixes` branch |
+| Git repo | Initialized (41+ commits on main) |
+| Dependencies installed | Yes (12 + 16 devDeps) |
+| Tests passing | 252 across 33 test files |
 
 ## Known issues for agents
 
@@ -129,8 +140,8 @@ These are not defaults — an agent would miss them:
   tools infer input format from the file extension. This is a known limitation.
 - **Biome, not ESLint/Prettier**: Linting uses `biome check .`; formatting
   uses `biome format --write .`. Do not add ESLint or Prettier config.
-- **Vitest env is `jsdom`**: Tests use `happy-dom`. Do not switch to `node`
-  or `edge`.
+- **Vitest env is `jsdom`** (per `vitest.config.ts`). `happy-dom` is also
+  in devDeps as a fallback. Do not switch to `node` or `edge`.
 - **First-turn trap**: If the user opens a session with a retrospective question
   ("What did we do so far?"), it is a question about the project's history and
   the AGENTS.md/docs — not an instruction to continue working. Ask clarifying
@@ -146,9 +157,10 @@ These are not defaults — an agent would miss them:
 - **jsquash `terminateWorker()` now rejects pending promises** (`src/lib/engines/jsquash.ts`).
   Previously it only cleared the pending map — now it rejects in-flight conversions
   so `useConversion` transitions to `'cancelled'`.
-- **Pre-existing type errors** (not introduced here): `HomePage.tsx` meta undefined,
-  `compress-image.tsx` and `resize-image.tsx` missing `WARN_IMAGE_BYTES` import
-  (exists in `guardRails.ts` but not imported on those pages).
+- **No outstanding pre-existing type errors.** Earlier claims of missing
+  `WARN_IMAGE_BYTES` imports in `compress-image.tsx` / `resize-image.tsx` and
+  `HomePage.tsx` meta-undefined were stale; both routes now import the
+  guardRails constant and `useSEO` is fully typed.
 - **History feature is FROZEN** (per user decision 2026-06-04). No
   `/history` route, no history state extension, no Footer link. Do
   not build until the user unfreezes.
@@ -159,13 +171,19 @@ These are not defaults — an agent would miss them:
 - **Mobile-first is scattered, not retrofitted.** Every new component
   is built mobile-first in its own wave (44px touch targets, no-hover
   fallbacks). There is no Wave 7 retro-pass.
-- **AI model files must be in `public/models/`** before Wave 8. The
-  plan calls for `briaai-rmbg-1.4.onnx` (~5MB), `realesrgan-x2plus.onnx`
-  (~10MB), `realesrgan-x4plus.onnx` (~40MB). License must be Apache 2.0
-  or MIT. If a different license is required, raise it before commit.
-- **`@imgly/background-removal` is the chosen bg-removal engine.**
-  Do not swap without user approval. It uses RMBG-1.4 under the hood
-  and the same model file lives at `public/models/`.
+- **AI model files must be in `public/models/`** before Wave 8. Accepted licenses: **MIT, Apache 2.0, BSD-3-Clause** (all permissive; only attribution required). GPL/LGPL/source-available/non-commercial/custom licenses are NOT accepted. If a different license is required, raise it before commit.
+
+  **Wave 8 actual model picks** (per 2026-06-04 decision):
+  - `silueta.onnx` (~43MB) — U-2-Net variant, **Apache 2.0** (xuebinqin/U-2-Net). Used by `/remove-background`.
+  - `realesrgan-x2plus.fp16.onnx` (~34MB) — **BSD-3-Clause** (xinntao/Real-ESRGAN). Used by `/upscale-image` (2× mode).
+  - `realesrgan-x4plus.fp16.onnx` (~34MB) — **BSD-3-Clause** (xinntao/Real-ESRGAN). Used by `/upscale-image` (4× mode).
+
+  **Smart-compress has no separate model** — it's codec-quality iteration using `jsquash` jpeg/webp/avif codecs (all MIT).
+- **`onnxruntime-web` is the chosen AI engine** for bg-removal
+  and upscale. Do not swap to `@imgly/background-removal` without
+  user approval — direct ORT is the chosen path (smaller bundle,
+  no third-party runtime). `@imgly/background-removal` was removed
+  from `package.json` in the post-Wave-8 cleanup commit.
 - **`vite-plugin-pwa` is the chosen PWA plugin.** Config-only install
   in Wave 0; full `VitePWA({...})` config lands in Wave 7. Do not
   add `workbox-cli` or hand-rolled service workers.

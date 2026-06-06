@@ -1,4 +1,4 @@
-import { type ChangeEvent, type DragEvent, useCallback, useRef, useState } from 'react';
+import { type ChangeEvent, type DragEvent, type ClipboardEvent, useCallback, useRef, useState } from 'react';
 
 export interface UseFileDropResult {
   isDragging: boolean;
@@ -7,6 +7,7 @@ export interface UseFileDropResult {
   onDragEnter: (e: DragEvent<HTMLElement>) => void;
   onDragLeave: (e: DragEvent<HTMLElement>) => void;
   onDrop: (e: DragEvent<HTMLElement>) => void;
+  onPaste: (e: ClipboardEvent<HTMLElement>) => void;
   onInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
   inputProps: {
     ref: React.RefObject<HTMLInputElement>;
@@ -87,6 +88,21 @@ export function useFileDrop({
     [multiple, onFile],
   );
 
+  const onPaste = useCallback(
+    (e: ClipboardEvent<HTMLElement>) => {
+      const files = e.clipboardData?.files;
+      if (!files || files.length === 0) return;
+      e.preventDefault();
+      if (multiple) {
+        onFile(Array.from(files));
+      } else {
+        const file = files[0];
+        if (file) onFile(file);
+      }
+    },
+    [multiple, onFile],
+  );
+
   return {
     isDragging,
     open,
@@ -94,6 +110,7 @@ export function useFileDrop({
     onDragEnter,
     onDragLeave,
     onDrop,
+    onPaste,
     onInputChange,
     inputProps: {
       ref: inputRef,

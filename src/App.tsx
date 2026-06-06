@@ -35,9 +35,24 @@ const SvgToPng = lazy(() => import('./routes/svg-to-png'));
 const ResizeImage = lazy(() => import('./routes/resize-image'));
 const CompressImage = lazy(() => import('./routes/compress-image'));
 const StripExif = lazy(() => import('./routes/strip-exif'));
+const CropImage = lazy(() => import('./routes/crop-image'));
+const RotateImage = lazy(() => import('./routes/rotate-image'));
+const AddWatermark = lazy(() => import('./routes/add-watermark'));
+const ViewExif = lazy(() => import('./routes/view-exif'));
 const VideoToMp4 = lazy(() => import('./routes/video-to-mp4'));
 const VideoToGif = lazy(() => import('./routes/video-to-gif'));
 const ExtractAudio = lazy(() => import('./routes/extract-audio'));
+const VideoTrim = lazy(() => import('./routes/video-trim'));
+const CropVideo = lazy(() => import('./routes/crop-video'));
+const RotateVideo = lazy(() => import('./routes/rotate-video'));
+const MuteVideo = lazy(() => import('./routes/mute-video'));
+const VideoSpeed = lazy(() => import('./routes/video-speed'));
+const ResizeVideo = lazy(() => import('./routes/resize-video'));
+const ExtractFrames = lazy(() => import('./routes/extract-frames'));
+const VideoToWebm = lazy(() => import('./routes/video-to-webm'));
+const RemoveBackground = lazy(() => import('./routes/remove-background'));
+const UpscaleImage = lazy(() => import('./routes/upscale-image'));
+const SmartCompress = lazy(() => import('./routes/smart-compress'));
 
 function Loading() {
   return (
@@ -289,6 +304,38 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: 'crop-image',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <CropImage />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'rotate-image',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <RotateImage />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'add-watermark',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <AddWatermark />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'view-exif',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <ViewExif />
+          </Suspense>
+        ),
+      },
+      {
         path: 'video-to-mp4',
         element: (
           <Suspense fallback={<Loading />}>
@@ -309,6 +356,94 @@ const router = createBrowserRouter([
         element: (
           <Suspense fallback={<Loading />}>
             <ExtractAudio />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'video-trim',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <VideoTrim />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'crop-video',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <CropVideo />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'rotate-video',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <RotateVideo />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'mute-video',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <MuteVideo />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'video-speed',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <VideoSpeed />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'resize-video',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <ResizeVideo />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'extract-frames',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <ExtractFrames />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'video-to-webm',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <VideoToWebm />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'remove-background',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <RemoveBackground />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'upscale-image',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <UpscaleImage />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'smart-compress',
+        element: (
+          <Suspense fallback={<Loading />}>
+            <SmartCompress />
           </Suspense>
         ),
       },

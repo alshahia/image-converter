@@ -560,13 +560,13 @@ New test fixtures: `tests/fixtures/sample.{avif,jxl,bmp,tiff,ico,svg,mov,webm,mp
 
 **3 new routes. Brings total: 48 → 51. Bundle delta: 7-55 MB (lazy, per-tool, opt-in).**
 
-**Pre-condition:** model files downloaded + committed to `public/models/`. Verify before starting.
+**Pre-condition:** model files downloaded + committed to `public/models/`. Apache 2.0 / MIT / BSD-3-Clause only. Verify before starting.
 
 ### Conversion files (`src/lib/conversions/image/ai/`)
 
-- [ ] `remove-background.ts` — `@imgly/background-removal`. Returns PNG with transparent background. Surfaces model-load progress.
-- [ ] `upscale.ts` — `onnxruntime-web` + RealESRGAN. Accepts `{ model: 'x2plus' | 'x4plus' }`. Inference on input image → upscaled PNG.
-- [ ] `smart-compress.ts` — `onnxruntime-web` + perceptual quality model. Accepts `{ targetSizeKB: number }`. Iterates codec quality until output ≤ target.
+- [ ] `remove-background.ts` — direct `onnxruntime-web` + U-2-Net (`silueta.onnx`, ~43MB, Apache 2.0). Returns PNG with transparent background. Surfaces model-load progress. Override: the plan originally said `@imgly/background-removal` (RMBG-1.4, non-commercial) — we use direct ORT to keep licensing commercial-friendly.
+- [ ] `upscale.ts` — `onnxruntime-web` + Real-ESRGAN (`realesrgan-x2plus.fp16.onnx` and `realesrgan-x4plus.fp16.onnx`, BSD-3-Clause). Accepts `{ model: 'x2plus' | 'x4plus' }`. Inference on input image → upscaled PNG.
+- [ ] `smart-compress.ts` — codec-quality iteration using `jsquash` jpeg/webp/avif. Accepts `{ targetSizeKB: number }`. Bisects quality in [0.3, 0.95] until output ≤ target. **No separate model** (plan originally called for a perceptual quality model; dropped — codec iteration is sufficient).
 
 ### Engine
 

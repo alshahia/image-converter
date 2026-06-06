@@ -15,9 +15,11 @@ export interface RecentConversion {
 export interface SettingsState {
   defaultJpegQuality: number;
   recentConversions: RecentConversion[];
+  enableAi: boolean;
   setDefaultJpegQuality: (q: number) => void;
   recordConversion: (entry: Omit<RecentConversion, 'id' | 'at'>) => void;
   clearRecent: () => void;
+  setEnableAi: (v: boolean) => void;
   reset: () => void;
 }
 
@@ -43,6 +45,7 @@ export const useSettings = create<SettingsState>()(
     (setState) => ({
       defaultJpegQuality: 0.92,
       recentConversions: [],
+      enableAi: true,
       setDefaultJpegQuality: (q) => setState({ defaultJpegQuality: clampQuality(q) }),
       recordConversion: (entry) =>
         setState((s) => ({
@@ -59,19 +62,29 @@ export const useSettings = create<SettingsState>()(
           ].slice(0, RECENT_LIMIT),
         })),
       clearRecent: () => setState({ recentConversions: [] }),
+      setEnableAi: (v) => setState({ enableAi: v }),
       reset: () =>
         setState({
           defaultJpegQuality: 0.92,
           recentConversions: [],
+          enableAi: true,
         }),
     }),
     {
       name: STORAGE_KEY,
       storage: createJSONStorage(() => idbStorage),
-      version: 1,
+      version: 2,
+      migrate: (persisted, fromVersion) => {
+        const state = (persisted ?? {}) as Partial<SettingsState>;
+        if (fromVersion < 2) {
+          return { ...state, enableAi: true };
+        }
+        return state;
+      },
       partialize: (state) => ({
         defaultJpegQuality: state.defaultJpegQuality,
         recentConversions: state.recentConversions,
+        enableAi: state.enableAi,
       }),
     },
   ),

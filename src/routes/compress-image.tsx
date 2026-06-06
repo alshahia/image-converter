@@ -8,58 +8,39 @@ import { Card } from '../components/ui/card';
 import { Slider } from '../components/ui/slider';
 import { DropZone } from '../components/upload/DropZone';
 import { FilePreview } from '../components/upload/FilePreview';
-import { useConversion } from '../hooks/useConversion';
+import { useFileConversion } from '../hooks/useFileConversion';
 import { useSEO } from '../hooks/useSEO';
 import { compressImage } from '../lib/conversions/image/compress';
 import { detectFormat, terminateWorker } from '../lib/engines/jsquash';
-import { humanReadableAccept, isAcceptedType } from '../lib/utils/fileValidation';
-import { checkFileSize, formatBytes } from '../lib/utils/guardRails';
-import { MAX_IMAGE_BYTES, WARN_IMAGE_BYTES } from '../lib/utils/guardRails';
+import { humanReadableAccept } from '../lib/utils/fileValidation';
+import { formatBytes, MAX_IMAGE_BYTES, WARN_IMAGE_BYTES } from '../lib/utils/guardRails';
 
 const ACCEPT = ['.jpg', '.jpeg', '.webp', 'image/jpeg', 'image/webp'];
 
 export default function CompressImagePage() {
-  const [file, setFile] = useState<File | null>(null);
-  const [fileError, setFileError] = useState<string | null>(null);
+  const {
+    file,
+    fileError,
+    handleFile,
+    handleRemove,
+    status,
+    progress,
+    result,
+    error,
+    run,
+    cancel,
+  } = useFileConversion({
+    accept: ACCEPT,
+    maxBytes: MAX_IMAGE_BYTES,
+    warnBytes: WARN_IMAGE_BYTES,
+    onCancel: terminateWorker,
+  });
   const [quality, setQuality] = useState(70);
-  const { status, progress, result, error, run, cancel, reset } = useConversion(terminateWorker);
 
   useSEO(
     'Compress Image',
     'Reduce the file size of a JPG or WebP image by re-encoding at a lower quality. No upload, no signup.',
   );
-
-  const handleFile = useCallback(
-    (f: File | File[]) => {
-      const first = Array.isArray(f) ? f[0] : f;
-      if (!first) {
-        setFileError('No file selected.');
-        return;
-      }
-      setFileError(null);
-      if (!isAcceptedType(first, ACCEPT)) {
-        setFileError(
-          `Expected ${humanReadableAccept(ACCEPT)}. Got ${first.type || 'unknown type'}.`,
-        );
-        return;
-      }
-      const sizeCheck = checkFileSize(first, MAX_IMAGE_BYTES, WARN_IMAGE_BYTES, 'file');
-      if (sizeCheck.verdict === 'block') {
-        setFileError(sizeCheck.reason);
-        return;
-      }
-      setFile(first);
-      reset();
-    },
-    [reset],
-  );
-
-  const handleRemove = useCallback(() => {
-    cancel();
-    setFile(null);
-    setFileError(null);
-    reset();
-  }, [cancel, reset]);
 
   const handleConvert = useCallback(async () => {
     if (!file) return;

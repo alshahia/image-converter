@@ -26,6 +26,7 @@ export function DropZone({
       onDragEnter={drop.onDragEnter}
       onDragLeave={drop.onDragLeave}
       onDrop={drop.onDrop}
+      onPaste={drop.onPaste}
       className={`group relative flex w-full flex-col items-center justify-center rounded-glass-sm border-2 border-dashed p-8 text-center transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] backdrop-blur-glass-sm sm:p-10 ${
         drop.isDragging
           ? 'border-accent bg-glass-strong shadow-drift-card-hover dark:border-accent dark:bg-white/[0.08]'
